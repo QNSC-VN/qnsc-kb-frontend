@@ -7,6 +7,13 @@ import ArticleDetailPage from '../pages/articles/ArticleDetailPage'
 import ArticleEditPage from '../pages/articles/ArticleEditPage'
 import SearchResultsPage from '../pages/search/SearchResultsPage'
 import AskPage from '../pages/ai/AskPage'
+import PendingDraftsPage from '../pages/governance/PendingDraftsPage'
+import GapQueuePage from '../pages/governance/GapQueuePage'
+import AuditLogPage from '../pages/governance/AuditLogPage'
+import HealthDashboardPage from '../pages/governance/HealthDashboardPage'
+import TagsPage from '../pages/meta/TagsPage'
+import GlossaryPage from '../pages/meta/GlossaryPage'
+import TaxonomyPage from '../pages/meta/TaxonomyPage'
 import ProtectedRoute from './ProtectedRoute'
 
 export default function AppRoutes() {
@@ -21,6 +28,17 @@ export default function AppRoutes() {
         <Route path="articles/:id/edit" element={<ArticleEditPage />} />
         <Route path="search" element={<SearchResultsPage />} />
         <Route path="ai" element={<AskPage />} />
+        
+        {/* Governance */}
+        <Route path="governance/pending-drafts" element={<PendingDraftsPage />} />
+        <Route path="governance/gap-queue" element={<GapQueuePage />} />
+        <Route path="governance/audit-log" element={<AuditLogPage />} />
+        <Route path="governance/health" element={<HealthDashboardPage />} />
+        
+        {/* Meta */}
+        <Route path="meta/tags" element={<TagsPage />} />
+        <Route path="meta/glossary" element={<GlossaryPage />} />
+        <Route path="meta/taxonomy" element={<TaxonomyPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

@@ -1,2 +1,27 @@
-import client from './client';
-// API endpoints for search
+import client from './client'
+
+export async function search(params: { q: string; dept?: string; sensitivity?: string; limit?: number }) {
+  const response = await client.get('/search', { params })
+  return response.data
+}
+
+// Meta queries placed here for search/browse synergy
+export async function getTags() {
+  const response = await client.get('/meta/tags')
+  return response.data
+}
+
+export async function getGlossary() {
+  const response = await client.get('/meta/glossary')
+  return response.data
+}
+
+export async function getTaxonomy() {
+  const response = await client.get('/meta/taxonomy')
+  return response.data
+}
+
+export async function getAccessGroups() {
+  const response = await client.get('/meta/groups')
+  return response.data
+}

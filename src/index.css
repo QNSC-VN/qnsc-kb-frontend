@@ -1,9 +1,68 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
-  body {
-    @apply bg-slate-950 text-slate-100 antialiased selection:bg-brand-500/30;
+  :root { font-family: 'DM Sans', Inter, Helvetica, Arial, sans-serif; }
+  html { font-size: 14px; }
+  body { @apply bg-canvas text-ink antialiased selection:bg-coral/20; }
+  button, input, textarea, select { font: inherit; font-size: 0.875rem; }
+  input, textarea, select {
+    color-scheme: dark;
+    background-color: #171e27 !important;
+    color: #f4f7fb !important;
+    border-color: #3a4859 !important;
   }
+  input::placeholder, textarea::placeholder { color: #8793a3 !important; opacity: 1; }
+  select option, select optgroup { background-color: #171e27 !important; color: #f4f7fb !important; }
+}
+
+@layer components {
+  .mm-card { @apply rounded-2xl border border-hairline bg-white; }
+  .mm-pill { @apply rounded-full; }
+  .mm-primary { @apply mm-pill bg-ink text-white transition-colors hover:bg-charcoal; }
+  .mm-secondary { @apply mm-pill border border-ink bg-white text-ink transition-colors hover:bg-surface; }
+}
+
+/* Legacy screen compatibility: keeps older route components on the light system
+   while they are gradually migrated to the MiniMax tokens above. */
+@layer utilities {
+  .bg-slate-950 { background-color: #ffffff !important; }
+  .bg-slate-900 { background-color: #f7f8fa !important; }
+  .bg-slate-800 { background-color: #f2f3f5 !important; }
+  .border-slate-800, .border-slate-700 { border-color: #e5e7eb !important; }
+  .text-slate-100, .text-slate-200 { color: #0a0a0a !important; }
+  .text-slate-300 { color: #222222 !important; }
+  .text-slate-400 { color: #5f5f5f !important; }
+  .text-slate-500, .text-slate-600 { color: #8e8e93 !important; }
+}
+
+/* Dark product skin: preserve the MiniMax geometry while using a richer,
+   lower-glare workspace palette for the knowledge base. */
+@layer utilities {
+  body, .bg-canvas { background-color: #0f141b !important; }
+  .bg-white { background-color: #171e27 !important; }
+  .bg-surface { background-color: #1b2430 !important; }
+  .bg-surface-soft { background-color: #222d3a !important; }
+  .border-hairline, .border-hairline-soft { border-color: #2e3a49 !important; }
+  .text-ink { color: #f4f7fb !important; }
+  .text-charcoal { color: #d6dce5 !important; }
+  .text-steel { color: #a9b3c1 !important; }
+  .text-stone, .text-muted { color: #7f8b9a !important; }
+  .text-slate-100, .text-slate-200 { color: #f4f7fb !important; }
+  .text-slate-300, [class~="text-slate-350"] { color: #d6dce5 !important; }
+  .text-slate-400 { color: #a9b3c1 !important; }
+  .text-slate-500, .text-slate-600 { color: #8f9aaa !important; }
+  .text-brand-300 { color: #93c5fd !important; }
+  .text-brand-400 { color: #60a5fa !important; }
+  .placeholder-stone::placeholder { color: #718096 !important; }
+  .bg-slate-950 { background-color: #0f141b !important; }
+  .bg-slate-900 { background-color: #171e27 !important; }
+  .bg-slate-800 { background-color: #222d3a !important; }
+  .hover\:bg-surface:hover { background-color: #222d3a !important; }
+  .hover\:bg-surface-soft:hover { background-color: #273444 !important; }
+  .bg-blue-50 { background-color: rgba(20, 86, 240, 0.18) !important; }
+  .hover\:bg-blue-100:hover { background-color: rgba(20, 86, 240, 0.28) !important; }
 }
