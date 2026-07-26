@@ -3,11 +3,24 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import { ArrowLeft, Save, Shield, HelpCircle, Lock } from 'lucide-react'
 import { getArticle, createArticle, updateArticle } from '../../api/articles'
 import { getAccessGroups } from '../../api/search'
+import { useDialog } from '../../components/ui/DialogProvider'
+
+const ARTICLE_TEMPLATES: Record<string, string> = {
+  POLICY: '# Purpose\n\n## Scope\n\n## Policy\n\n## Responsibilities\n\n## Exceptions\n\n## Review and approval\n',
+  SOP: '# Purpose\n\n## Prerequisites\n\n## Procedure\n\n1. \n\n## Verification\n\n## Rollback or escalation\n',
+  DECISION: '# Decision\n\n## Context\n\n## Options considered\n\n## Decision and rationale\n\n## Consequences\n\n## Owners and follow-up\n',
+  FAQ: '# Frequently asked question\n\n## Question\n\n## Answer\n\n## Related resources\n',
+  RCA: '# Root cause analysis\n\n## Incident summary\n\n## Impact\n\n## Timeline\n\n## Root cause\n\n## Corrective actions\n',
+  HOWTO: '# How to…\n\n## When to use this\n\n## Steps\n\n1. \n\n## Troubleshooting\n',
+  PLAYBOOK: '# Playbook\n\n## Trigger\n\n## Roles\n\n## Response steps\n\n1. \n\n## Exit criteria\n',
+  REFERENCE: '# Reference\n\n## Summary\n\n## Details\n\n## Examples\n\n## Related links\n',
+}
 
 export default function ArticleEditPage() {
   const { id } = useParams<{ id: string }>()
   const isEditMode = !!id
   const navigate = useNavigate()
+  const dialog = useDialog()
 
   // Form states
   const [title, setTitle] = useState('')
@@ -16,6 +29,7 @@ export default function ArticleEditPage() {
   const [domain, setDomain] = useState('General')
   const [type, setType] = useState('SOP')
   const [sensitivity, setSensitivity] = useState('internal')
+  const [language, setLanguage] = useState('en')
   const [status, setStatus] = useState('draft')
   const [tagsInput, setTagsInput] = useState('')
   const [selectedGroups, setSelectedGroups] = useState<string[]>([])
@@ -42,6 +56,7 @@ export default function ArticleEditPage() {
           setDomain(art.domain)
           setType(art.type)
           setSensitivity(art.sensitivity)
+          setLanguage(art.language || 'en')
           setStatus(art.status)
           setTagsInput(art.tags ? art.tags.map((t: any) => t.tag).join(', ') : '')
           setSelectedGroups(art.access_groups ? art.access_groups.map((g: any) => g.id) : [])
@@ -77,6 +92,7 @@ export default function ArticleEditPage() {
       domain,
       type,
       sensitivity,
+      language,
       status,
       tags,
       access_group_ids: selectedGroups.length > 0 ? selectedGroups : null,
@@ -105,6 +121,13 @@ export default function ArticleEditPage() {
     } else {
       setSelectedGroups([...selectedGroups, groupId])
     }
+  }
+
+  const insertTemplate = async () => {
+    const template = ARTICLE_TEMPLATES[type]
+    if (!template) return
+    if (bodyMd.trim() && !(await dialog.confirm('Replace the current body with the selected template?', { title: 'Replace article body', confirmLabel: 'Replace', tone: 'info' }))) return
+    setBodyMd(template)
   }
 
   if (loading) {
@@ -156,7 +179,12 @@ export default function ArticleEditPage() {
 
           {/* Markdown Content */}
           <div className="space-y-1.5">
-            <label className="block text-sm font-semibold text-slate-300">Body Markdown</label>
+            <div className="flex items-center justify-between">
+              <label className="block text-sm font-semibold text-slate-300">Body Markdown</label>
+              <button type="button" onClick={insertTemplate} className="text-xs font-semibold text-brand-400 hover:text-brand-300">
+                Insert {type} template
+              </button>
+            </div>
             <textarea
               placeholder="# Introduction&#10;Write details about procedures, policies, or decision log references here..."
               value={bodyMd}
@@ -244,6 +272,21 @@ export default function ArticleEditPage() {
                   <option value="internal">Internal (Staff)</option>
                   <option value="confidential">Confidential</option>
                   <option value="restricted">Restricted</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 mb-1.5">Language</label>
+                <select
+                  value={language}
+                  onChange={(e) => setLanguage(e.target.value)}
+                  className="w-full rounded-lg border border-slate-800 bg-slate-950 py-2 px-2.5 text-xs text-white outline-none focus:border-brand-500"
+                >
+                  <option value="en">English</option>
+                  <option value="vi">Vietnamese</option>
+                  <option value="ja">Japanese</option>
+                  <option value="ko">Korean</option>
+                  <option value="zh">Chinese</option>
                 </select>
               </div>
 

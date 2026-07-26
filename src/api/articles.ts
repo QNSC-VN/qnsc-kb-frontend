@@ -10,6 +10,16 @@ export async function getArticle(id: string) {
   return response.data
 }
 
+export async function downloadArticleSource(id: string) {
+  const response = await client.get(`/articles/${id}/source`, { responseType: 'blob' })
+  return URL.createObjectURL(response.data)
+}
+
+export async function getRelatedArticles(id: string, limit = 6) {
+  const response = await client.get(`/articles/${id}/related`, { params: { limit } })
+  return response.data
+}
+
 export async function createArticle(data: any) {
   const response = await client.post('/articles', data)
   return response.data
@@ -17,6 +27,11 @@ export async function createArticle(data: any) {
 
 export async function updateArticle(id: string, data: any) {
   const response = await client.put(`/articles/${id}`, data)
+  return response.data
+}
+
+export async function autoTagArticles(articleIds: string[]) {
+  const response = await client.post('/articles/auto-tags', { article_ids: articleIds })
   return response.data
 }
 
@@ -32,6 +47,11 @@ export async function getHistory(id: string) {
 
 export async function getVersionSnapshot(id: string, versionNum: number) {
   const response = await client.get(`/articles/${id}/versions/${versionNum}`)
+  return response.data
+}
+
+export async function restoreArticleVersion(id: string, versionNum: number) {
+  const response = await client.post(`/articles/${id}/versions/${versionNum}/restore`)
   return response.data
 }
 

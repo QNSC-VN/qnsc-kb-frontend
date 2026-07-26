@@ -20,10 +20,59 @@
 }
 
 @layer components {
+  .field { @apply w-full rounded-lg border border-hairline bg-surface-soft px-3 py-2 text-sm text-ink outline-none focus:border-cyan; }
+  .label { @apply mb-1 block text-[11px] font-semibold uppercase tracking-wide text-stone; }
   .mm-card { @apply rounded-2xl border border-hairline bg-white; }
   .mm-pill { @apply rounded-full; }
   .mm-primary { @apply mm-pill bg-ink text-white transition-colors hover:bg-charcoal; }
   .mm-secondary { @apply mm-pill border border-ink bg-white text-ink transition-colors hover:bg-surface; }
+}
+
+/* Quiet, dark scrollbar for the application shell. The track stays transparent
+   so scrolling does not introduce a bright vertical stripe beside the page. */
+.app-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #344354 transparent;
+}
+.app-scroll::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.app-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.app-scroll::-webkit-scrollbar-thumb {
+  background: #344354;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+}
+.app-scroll::-webkit-scrollbar-thumb:hover {
+  background: #50627a;
+  background-clip: padding-box;
+}
+
+.dialog-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #52657d transparent;
+  scrollbar-gutter: stable;
+}
+.dialog-scroll::-webkit-scrollbar {
+  width: 7px;
+}
+.dialog-scroll::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 12px 0;
+}
+.dialog-scroll::-webkit-scrollbar-thumb {
+  background: #52657d;
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+}
+.dialog-scroll::-webkit-scrollbar-thumb:hover {
+  background: #6e86a3;
+  background-clip: padding-box;
 }
 
 /* Legacy screen compatibility: keeps older route components on the light system

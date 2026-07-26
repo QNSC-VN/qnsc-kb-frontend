@@ -5,7 +5,7 @@ interface AuthContextType {
   isAuthenticated: boolean
   loading: boolean
   user: any
-  login: (token: string, user: any) => void
+  login: (token: string, user: any, refreshToken?: string) => void
   logout: () => void
 }
 
@@ -19,8 +19,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setLoading(false)
   }, [token])
 
-  const login = (token: string, user: any) => {
-    setAuth(token, user)
+  const login = (token: string, user: any, refreshToken?: string) => {
+    setAuth(token, user, refreshToken)
   }
 
   const logout = () => {

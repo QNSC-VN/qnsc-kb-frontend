@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react'
 import { AlertCircle, UserPlus, Trash2, RefreshCw } from 'lucide-react'
 import { getSearchGaps, assignSearchGap, dismissSearchGap } from '../../api/governance'
+import { useDialog } from '../../components/ui/DialogProvider'
 
 export default function GapQueuePage() {
+  const dialog = useDialog()
   const [gaps, setGaps] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [actingGapId, setActingGapId] = useState<string | null>(null)
@@ -42,7 +44,7 @@ export default function GapQueuePage() {
       setGaps(gaps.filter(g => g.id !== selectedGap.id))
     } catch (err) {
       console.error(err)
-      alert('Failed to assign gap')
+      await dialog.alert('Failed to assign gap', { title: 'Assignment failed' })
     } finally {
       setActingGapId(null)
       setSelectedGap(null)
@@ -56,7 +58,7 @@ export default function GapQueuePage() {
       setGaps(gaps.filter(g => g.id !== gapId))
     } catch (err) {
       console.error(err)
-      alert('Failed to dismiss gap')
+      await dialog.alert('Failed to dismiss gap', { title: 'Dismissal failed' })
     } finally {
       setActingGapId(null)
     }

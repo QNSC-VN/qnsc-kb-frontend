@@ -1,182 +1,55 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Mail, ShieldCheck } from 'lucide-react'
 import { useAuth } from './useAuth'
-import { login as loginApi, register as registerApi } from '../api/auth'
+import { login as loginApi } from '../api/auth'
+import { useLanguage } from '../i18n/LanguageProvider'
 
 export default function LoginPage() {
-  const [isRegister, setIsRegister] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [name, setName] = useState('')
-  const [dept, setDept] = useState('Engineering')
-  const [role, setRole] = useState('Staff')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-
   const { login } = useAuth()
   const navigate = useNavigate()
+  const { language, setLanguage, t } = useLanguage()
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault()
     setError('')
     setLoading(true)
-
     try {
-      if (isRegister) {
-        // Register flow
-        const registerData = {
-          email,
-          name,
-          password,
-          dept,
-          role
-        }
-        await registerApi(registerData)
-        
-        // Auto-login after registration
-        const formData = new FormData()
-        formData.append('username', email)
-        formData.append('password', password)
-        const loginData = await loginApi(formData)
-        login(loginData.access_token, loginData.user)
-        navigate('/')
-      } else {
-        // Login flow
-        const formData = new FormData()
-        formData.append('username', email)
-        formData.append('password', password)
-        const loginData = await loginApi(formData)
-        login(loginData.access_token, loginData.user)
-        navigate('/')
-      }
+      const formData = new FormData()
+      formData.append('username', email)
+      formData.append('password', password)
+      const loginData = await loginApi(formData)
+      login(loginData.access_token, loginData.user, loginData.refresh_token)
+      navigate('/')
     } catch (err: any) {
-      console.error(err)
-      setError(err.response?.data?.detail || 'Authentication failed. Please check credentials.')
+      setError(err.response?.data?.detail || t('auth.invalidCredentials'))
     } finally {
       setLoading(false)
     }
   }
 
-  return (
-    <div className="flex h-screen items-center justify-center bg-slate-950 px-4 relative overflow-hidden">
-      {/* Background gradients */}
-      <div className="absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-brand-500/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-1/4 right-1/4 translate-x-1/2 translate-y-1/2 w-96 h-96 bg-rose-500/10 rounded-full blur-3xl pointer-events-none" />
-
-      <form onSubmit={handleSubmit} className="w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900/60 p-8 shadow-2xl backdrop-blur-xl relative z-10">
-        <div className="mb-8 text-center">
-          <span className="inline-block bg-brand-600 px-3 py-1.5 rounded-xl text-white font-extrabold text-xs mb-3 shadow-lg shadow-brand-600/30">
-            QNSC ENTERPRISE
-          </span>
-          <h2 className="text-3xl font-extrabold tracking-tight text-white">
-            {isRegister ? 'Create Account' : 'Welcome Back'}
-          </h2>
-          <p className="text-slate-400 text-sm mt-2">
-            {isRegister ? 'Set up your developer profile' : 'Sign in to access your organization KB'}
-          </p>
-        </div>
-
-        {error && (
-          <div className="mb-5 rounded-lg border border-rose-500/20 bg-rose-500/10 p-3 text-sm text-rose-400">
-            {error}
-          </div>
-        )}
-
-        <div className="space-y-4">
-          {isRegister && (
-            <div>
-              <label className="block text-sm font-semibold text-slate-300 mb-1">Full Name</label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full rounded-lg border border-slate-800 bg-slate-950 py-2.5 px-3.5 text-white outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500/20 transition-all text-sm placeholder-slate-600"
-                placeholder="John Doe"
-                required
-              />
-            </div>
-          )}
-
-          <div>
-            <label className="block text-sm font-semibold text-slate-300 mb-1">Email Address</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-lg border border-slate-800 bg-slate-950 py-2.5 px-3.5 text-white outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500/20 transition-all text-sm placeholder-slate-600"
-              placeholder="name@qnsc.vn"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-slate-300 mb-1">Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-lg border border-slate-800 bg-slate-950 py-2.5 px-3.5 text-white outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500/20 transition-all text-sm placeholder-slate-600"
-              placeholder="••••••••"
-              required
-            />
-          </div>
-
-          {isRegister && (
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-semibold text-slate-300 mb-1">Department</label>
-                <select
-                  value={dept}
-                  onChange={(e) => setDept(e.target.value)}
-                  className="w-full rounded-lg border border-slate-800 bg-slate-950 py-2.5 px-3 text-white outline-none focus:border-brand-500 text-sm"
-                >
-                  <option value="Engineering">Engineering</option>
-                  <option value="Security">Security</option>
-                  <option value="Human Resources">HR</option>
-                  <option value="Legal">Legal</option>
-                  <option value="Operations">Operations</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-slate-300 mb-1">Testing Role</label>
-                <select
-                  value={role}
-                  onChange={(e) => setRole(e.target.value)}
-                  className="w-full rounded-lg border border-slate-800 bg-slate-950 py-2.5 px-3 text-white outline-none focus:border-brand-500 text-sm"
-                >
-                  <option value="Staff">Staff</option>
-                  <option value="Reviewer">Reviewer</option>
-                  <option value="Department Owner">Dept Owner</option>
-                  <option value="Admin">Admin</option>
-                </select>
-              </div>
-            </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="mt-6 w-full rounded-lg bg-brand-600 py-3 font-semibold text-white shadow-lg shadow-brand-600/20 transition-all hover:bg-brand-500 hover:shadow-brand-500/35 disabled:opacity-50 text-sm"
-          >
-            {loading ? 'Processing...' : isRegister ? 'Create Account' : 'Sign In'}
-          </button>
-        </div>
-
-        <div className="mt-6 text-center text-sm text-slate-400">
-          {isRegister ? 'Already have an account?' : "Don't have an account?"}{' '}
-          <button
-            type="button"
-            onClick={() => {
-              setIsRegister(!isRegister)
-              setError('')
-            }}
-            className="font-semibold text-brand-400 hover:text-brand-300 underline transition-all"
-          >
-            {isRegister ? 'Sign In' : 'Create Account'}
-          </button>
-        </div>
-      </form>
-    </div>
-  )
+  return <div className="relative flex min-h-screen items-center justify-center bg-slate-950 px-4">
+    <select value={language} onChange={event => setLanguage(event.target.value as 'en' | 'vi')} className="absolute right-5 top-5 rounded-lg border border-slate-800 bg-slate-900 px-2.5 py-1.5 text-xs text-white outline-none" aria-label={t('language.switch')}>
+      <option value="en">English</option>
+      <option value="vi">Tiếng Việt</option>
+    </select>
+    <form onSubmit={handleSubmit} className="w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900/80 p-8 shadow-2xl">
+      <div className="mb-8 text-center">
+        <span className="mb-3 inline-flex items-center gap-2 rounded-xl bg-brand-600 px-3 py-1.5 text-xs font-extrabold text-white"><ShieldCheck size={14} />QNSC ENTERPRISE</span>
+        <h1 className="text-2xl font-bold text-white">{t('auth.signIn')}</h1>
+        <p className="mt-2 text-sm text-slate-400">{language === 'vi' ? 'Sử dụng tài khoản công ty được cấp.' : 'Use your provisioned company account.'}</p>
+      </div>
+      {error && <div className="mb-5 rounded-lg border border-rose-500/20 bg-rose-500/10 p-3 text-sm text-rose-400">{error}</div>}
+      <div className="space-y-4">
+        <label className="block text-sm font-semibold text-slate-300">{t('auth.email')}<input type="email" value={email} onChange={e => setEmail(e.target.value)} className="mt-1 w-full rounded-lg border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-sm text-white outline-none focus:border-brand-500" placeholder="name@company.com" required /></label>
+        <label className="block text-sm font-semibold text-slate-300">{t('auth.password')}<input type="password" value={password} onChange={e => setPassword(e.target.value)} className="mt-1 w-full rounded-lg border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-sm text-white outline-none focus:border-brand-500" required /></label>
+        <button disabled={loading} className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg bg-brand-600 py-2.5 text-sm font-semibold text-white hover:bg-brand-500 disabled:opacity-50"><Mail size={15} />{loading ? t('auth.signingIn') : t('auth.signInEmail')}</button>
+      </div>
+      <p className="mt-6 text-center text-xs leading-relaxed text-slate-500">Accounts are created by an Admin or CEO. Microsoft SSO will appear here when Entra ID is configured.</p>
+    </form>
+  </div>
 }

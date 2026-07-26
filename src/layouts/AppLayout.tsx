@@ -5,11 +5,11 @@ import Header from './Header'
 
 export default function AppLayout() {
   return (
-    <div className="flex min-h-screen bg-canvas text-ink">
+    <div className="flex h-screen overflow-hidden bg-canvas text-ink">
       <Sidebar />
-      <div className="flex flex-1 flex-col">
+      <div className="flex min-h-0 flex-1 flex-col">
         <Header />
-        <main className="flex-1 bg-canvas p-5 md:p-8">
+        <main className="app-scroll min-h-0 flex-1 overflow-y-auto bg-canvas p-5 md:p-8">
           <Outlet />
         </main>
       </div>

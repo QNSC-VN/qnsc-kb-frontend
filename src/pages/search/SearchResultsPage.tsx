@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Search as SearchIcon, Filter, Layers, Shield, FileText, ArrowRight, X } from 'lucide-react'
 import { search } from '../../api/search'
+import { useLanguage } from '../../i18n/LanguageProvider'
 
 export default function SearchResultsPage() {
   const [query, setQuery] = useState('')
@@ -12,6 +13,7 @@ export default function SearchResultsPage() {
   const [searched, setSearched] = useState(false)
   
   const navigate = useNavigate()
+  const { t } = useLanguage()
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -44,9 +46,9 @@ export default function SearchResultsPage() {
       <div>
         <h1 className="text-3xl font-extrabold tracking-tight text-white flex items-center gap-2">
           <SearchIcon size={28} className="text-brand-500" />
-          <span>Hybrid Search</span>
+          <span>{t('search.hybrid')}</span>
         </h1>
-        <p className="text-slate-400 mt-1">Queries both keywords and semantic meanings simultaneously</p>
+        <p className="text-slate-400 mt-1">{t('search.subtitle')}</p>
       </div>
 
       {/* Search Input and Filters Form */}
@@ -54,7 +56,7 @@ export default function SearchResultsPage() {
         <div className="flex gap-2">
           <input
             type="text"
-            placeholder="Type your search keyword or conceptual query..."
+            placeholder={t('search.placeholder')}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             className="flex-1 rounded-lg border border-slate-800 bg-slate-950 py-3 px-4 text-white placeholder-slate-500 outline-none focus:border-brand-500 text-sm"
@@ -65,7 +67,7 @@ export default function SearchResultsPage() {
             disabled={loading}
             className="bg-brand-600 hover:bg-brand-500 text-white font-semibold px-6 rounded-lg transition-all text-sm flex items-center gap-2"
           >
-            {loading ? 'Searching...' : 'Search'}
+            {loading ? t('search.searching') : t('nav.search')}
           </button>
         </div>
 
@@ -74,7 +76,7 @@ export default function SearchResultsPage() {
           <div className="flex flex-wrap items-center gap-4 text-xs">
             <span className="text-slate-500 font-semibold uppercase tracking-wider flex items-center gap-1">
               <Filter size={12} />
-              <span>Filters:</span>
+              <span>{t('search.filters')}</span>
             </span>
             
             {/* Department */}
@@ -112,7 +114,7 @@ export default function SearchResultsPage() {
               className="text-xs text-rose-400 hover:text-rose-300 flex items-center gap-0.5"
             >
               <X size={12} />
-              <span>Reset</span>
+              <span>{t('search.reset')}</span>
             </button>
           )}
         </div>
@@ -127,7 +129,7 @@ export default function SearchResultsPage() {
       ) : searched && results.length === 0 ? (
         <div className="rounded-xl border border-dashed border-slate-850 p-12 text-center bg-slate-900/5">
           <Layers className="mx-auto text-slate-600 mb-3" size={40} />
-          <h3 className="text-md font-semibold text-white">No matches found</h3>
+          <h3 className="text-md font-semibold text-white">{t('search.noMatches')}</h3>
           <p className="text-slate-500 text-xs mt-1">This query has been logged in the Governance Queue to improve coverage.</p>
         </div>
       ) : (
@@ -153,7 +155,7 @@ export default function SearchResultsPage() {
                   )}
                   {/* Score helper */}
                   <span className="text-[10px] text-slate-500 font-semibold ml-auto">
-                    Match Strength: {(res.score * 100).toFixed(0)}%
+                    {t('search.matchStrength')}: {(res.score * 100).toFixed(0)}%
                   </span>
                 </div>
 

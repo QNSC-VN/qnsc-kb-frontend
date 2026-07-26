@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { 
   ArrowLeft, 
@@ -16,6 +18,7 @@ import {
 } from 'lucide-react'
 import { 
   getArticle, 
+  getRelatedArticles,
   deleteArticle, 
   getComments, 
   addComment, 
@@ -26,16 +29,24 @@ import {
   bookmarkArticle, 
   unbookmarkArticle, 
   isBookmarked,
-  getHistory
+  getHistory,
+  restoreArticleVersion
 } from '../../api/articles'
+import { downloadArticleSource } from '../../api/articles'
+import PdfViewer from '../../components/ai/PdfViewer'
 import { useAuth } from '../../auth/useAuth'
+import { useDialog } from '../../components/ui/DialogProvider'
+import { useLanguage } from '../../i18n/LanguageProvider'
 
 export default function ArticleDetailPage() {
   const { id } = useParams<{ id: string }>()
   const { user: currentUser } = useAuth()
   const navigate = useNavigate()
+  const dialog = useDialog()
+  const { t } = useLanguage()
 
   const [article, setArticle] = useState<any>(null)
+  const [relatedArticles, setRelatedArticles] = useState<any[]>([])
   const [comments, setComments] = useState<any[]>([])
   const [newComment, setNewComment] = useState('')
   const [votes, setVotes] = useState({ upvotes: 0, downvotes: 0 })
@@ -43,6 +54,8 @@ export default function ArticleDetailPage() {
   const [bookmarked, setBookmarked] = useState(false)
   const [history, setHistory] = useState<any[]>([])
   const [showHistory, setShowHistory] = useState(false)
+  const [sourceViewer, setSourceViewer] = useState<{ url: string; name: string } | null>(null)
+  const [sourceLoading, setSourceLoading] = useState(false)
   
   const [loading, setLoading] = useState(true)
   const [submittingComment, setSubmittingComment] = useState(false)
@@ -53,6 +66,8 @@ export default function ArticleDetailPage() {
     try {
       const art = await getArticle(id)
       setArticle(art)
+      const related = await getRelatedArticles(id).catch(() => [])
+      setRelatedArticles(related)
       
       const comm = await getComments(id)
       setComments(comm)
@@ -81,14 +96,44 @@ export default function ArticleDetailPage() {
 
   const handleDelete = async () => {
     if (!id) return
-    if (window.confirm('Are you sure you want to soft-delete this article?')) {
+    if (await dialog.confirm('Are you sure you want to soft-delete this article?', { title: 'Delete article', confirmLabel: 'Delete article', tone: 'danger' })) {
       try {
         await deleteArticle(id)
         navigate('/articles')
       } catch (err) {
         console.error(err)
-        alert('Failed to delete article')
+        await dialog.alert('Failed to delete article', { title: 'Delete failed' })
       }
+    }
+  }
+
+  const handleOpenSource = async () => {
+    if (!id || sourceLoading) return
+    setSourceLoading(true)
+    try {
+      const url = await downloadArticleSource(id)
+      setSourceViewer({ url, name: article?.title || 'Original source' })
+    } catch {
+      await dialog.alert('The original source is not available for this article.', { title: 'Source unavailable', tone: 'info' })
+    } finally {
+      setSourceLoading(false)
+    }
+  }
+
+  const handleRestoreVersion = async (hist: any) => {
+    if (!id || !article || hist.version === article.version) return
+    const confirmed = await dialog.confirm(
+      t('articles.restoreConfirm', { version: hist.version }),
+      { title: `${t('articles.restoreTitle')} ${hist.version}`, confirmLabel: t('articles.restoreButton'), tone: 'info' },
+    )
+    if (!confirmed) return
+    try {
+      const restored = await restoreArticleVersion(id, hist.version)
+      setArticle(restored)
+      setHistory(await getHistory(id))
+      await dialog.alert(t('articles.versionRestored', { version: hist.version, newVersion: restored.version }), { title: 'Version restored', tone: 'success' })
+    } catch (err: any) {
+      await dialog.alert(err?.response?.data?.detail || 'Could not restore this version.', { title: 'Restore failed', tone: 'danger' })
     }
   }
 
@@ -171,7 +216,7 @@ export default function ArticleDetailPage() {
       <div className="flex items-center justify-between border-b border-slate-800 pb-4">
         <Link to="/articles" className="flex items-center gap-1.5 text-slate-400 hover:text-white transition-colors text-sm">
           <ArrowLeft size={16} />
-          <span>Back to Articles</span>
+          <span>{t('articles.back')}</span>
         </Link>
         
         <div className="flex items-center gap-3">
@@ -217,6 +262,16 @@ export default function ArticleDetailPage() {
               </button>
             </>
           )}
+          {article.source_available && (
+            <button
+              onClick={() => void handleOpenSource()}
+              disabled={sourceLoading}
+              className="flex items-center gap-1.5 rounded-lg border border-slate-800 bg-slate-900/40 px-3 py-2 text-xs font-semibold text-slate-300 transition-all hover:border-brand-500/50 hover:text-white disabled:cursor-wait disabled:opacity-60"
+              title="Review original source"
+            >
+              {sourceLoading ? 'Loading source…' : 'Review source'}
+            </button>
+          )}
         </div>
       </div>
 
@@ -248,8 +303,8 @@ export default function ArticleDetailPage() {
             </div>
 
             {/* Render Markdown text (simple fallback renderer for preview logic) */}
-            <div className="prose prose-invert max-w-none text-slate-350 leading-relaxed text-sm whitespace-pre-wrap font-sans border-t border-slate-800/40 pt-6">
-              {article.body_md}
+            <div className="prose prose-invert max-w-none text-slate-350 leading-relaxed text-sm font-sans border-t border-slate-800/40 pt-6 prose-headings:text-white prose-p:text-slate-300 prose-li:text-slate-300 prose-strong:text-white prose-code:rounded prose-code:bg-slate-800 prose-code:px-1 prose-code:py-0.5">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{article.body_md}</ReactMarkdown>
             </div>
 
             {/* Voting Bar */}
@@ -341,6 +396,20 @@ export default function ArticleDetailPage() {
               </div>
             </form>
           </div>
+
+          {relatedArticles.length > 0 && (
+            <div className="bg-slate-900/30 border border-slate-800/80 rounded-xl p-6 space-y-4">
+              <h3 className="text-sm font-semibold text-slate-300 uppercase tracking-wider">Related articles</h3>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {relatedArticles.map((related) => (
+                  <Link key={related.id} to={`/articles/${related.id}`} className="rounded-lg border border-slate-800 bg-slate-950/30 p-3 transition hover:border-brand-500/50 hover:bg-slate-900">
+                    <p className="truncate text-sm font-semibold text-white">{related.title}</p>
+                    <p className="mt-1 truncate text-xs text-slate-500">{related.dept} · {related.domain}</p>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Sidebar Metadata */}
@@ -352,6 +421,16 @@ export default function ArticleDetailPage() {
             </h3>
             
             <div className="space-y-3.5 text-sm">
+              {article.needs_update && (
+                <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs font-semibold text-rose-300">
+                  Review overdue — content needs update
+                </div>
+              )}
+              {article.status === 'published' && article.index_status && article.index_status !== 'ready' && (
+                <div className={`rounded-lg border px-3 py-2 text-xs font-semibold ${article.index_status === 'failed' ? 'border-rose-500/30 bg-rose-500/10 text-rose-300' : 'border-amber-500/30 bg-amber-500/10 text-amber-300'}`}>
+                  Search index: {article.index_status === 'processing' ? 'processing in background…' : article.index_status}
+                </div>
+              )}
               <div>
                 <label className="text-slate-500 text-xs block mb-0.5">Department</label>
                 <span className="text-white font-semibold">{article.dept}</span>
@@ -408,14 +487,14 @@ export default function ArticleDetailPage() {
           {showHistory && (
             <div className="bg-slate-900/30 border border-slate-800/80 rounded-xl p-5 space-y-4 animate-fadeIn">
               <h3 className="text-sm font-semibold text-slate-300 uppercase tracking-wider border-b border-slate-800 pb-2">
-                Revision History
+                {t('articles.versionHistory')}
               </h3>
               <div className="space-y-3.5 max-h-64 overflow-y-auto pr-1">
                 {history.map((hist) => (
                   <div 
                     key={hist.id} 
                     onClick={() => {
-                      alert(`Showing title of historical snapshot version ${hist.version}: "${hist.snapshot.title}"\n\nContent:\n${hist.snapshot.body_md}`)
+                      void dialog.alert(`Showing title of historical snapshot version ${hist.version}: "${hist.snapshot.title}"\n\nContent:\n${hist.snapshot.body_md}`, { title: `Historical version ${hist.version}`, tone: 'info' })
                     }}
                     className="cursor-pointer hover:bg-slate-800/40 p-2 rounded transition-all text-xs border border-transparent hover:border-slate-800"
                   >
@@ -426,7 +505,19 @@ export default function ArticleDetailPage() {
                       </span>
                     </div>
                     <div className="text-slate-400 line-clamp-1">{hist.snapshot.title}</div>
-                    <div className="text-[10px] text-slate-500 mt-1">Edited by: {hist.editor?.name || 'Owner'}</div>
+                    <div className="mt-1 flex items-center justify-between gap-2">
+                      <span className="text-[10px] text-slate-500">Edited by: {hist.editor?.name || 'Owner'}</span>
+                      {hist.version === article.version ? (
+                        <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-400">{t('articles.active')}</span>
+                      ) : canEdit ? (
+                        <button
+                          onClick={(event) => { event.stopPropagation(); void handleRestoreVersion(hist) }}
+                          className="rounded-md border border-cyan/30 px-2 py-1 text-[10px] font-semibold text-cyan transition hover:bg-cyan/10"
+                        >
+                          {t('articles.restoreActive')}
+                        </button>
+                      ) : null}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -435,6 +526,17 @@ export default function ArticleDetailPage() {
         </div>
 
       </div>
+      {sourceViewer && (
+        <PdfViewer
+          open
+          fileName={sourceViewer.name}
+          url={sourceViewer.url}
+          onClose={() => {
+            URL.revokeObjectURL(sourceViewer.url)
+            setSourceViewer(null)
+          }}
+        />
+      )}
     </div>
   )
 }

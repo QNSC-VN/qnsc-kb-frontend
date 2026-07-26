@@ -15,6 +15,9 @@ import TagsPage from '../pages/meta/TagsPage'
 import GlossaryPage from '../pages/meta/GlossaryPage'
 import TaxonomyPage from '../pages/meta/TaxonomyPage'
 import ProtectedRoute from './ProtectedRoute'
+import UsersPage from '../pages/admin/UsersPage'
+import ConnectorsPage from '../pages/admin/ConnectorsPage'
+import FeatureFlagsPage from '../pages/admin/FeatureFlagsPage'
 
 export default function AppRoutes() {
   return (
@@ -39,6 +42,9 @@ export default function AppRoutes() {
         <Route path="meta/tags" element={<TagsPage />} />
         <Route path="meta/glossary" element={<GlossaryPage />} />
         <Route path="meta/taxonomy" element={<TaxonomyPage />} />
+        <Route path="admin/users" element={<UsersPage />} />
+        <Route path="admin/connectors" element={<ConnectorsPage />} />
+        <Route path="admin/features" element={<FeatureFlagsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
