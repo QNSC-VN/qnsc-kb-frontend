@@ -75,6 +75,21 @@
   background-clip: padding-box;
 }
 
+.sidebar-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #4b5d73 transparent;
+  scrollbar-gutter: stable;
+}
+.sidebar-scroll::-webkit-scrollbar { width: 8px; }
+.sidebar-scroll::-webkit-scrollbar-track { background: transparent; margin: 6px 0; }
+.sidebar-scroll::-webkit-scrollbar-thumb {
+  background: #4b5d73;
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+}
+.sidebar-scroll::-webkit-scrollbar-thumb:hover { background: #6f87a3; background-clip: padding-box; }
+
 /* Legacy screen compatibility: keeps older route components on the light system
    while they are gradually migrated to the MiniMax tokens above. */
 @layer utilities {

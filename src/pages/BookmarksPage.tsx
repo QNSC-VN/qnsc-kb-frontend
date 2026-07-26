@@ -1,0 +1,5 @@
+import React, { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { Bookmark } from 'lucide-react'
+import { getBookmarks } from '../api/articles'
+export default function BookmarksPage() { const [items, setItems] = useState<any[] | null>(null); useEffect(() => { void getBookmarks().then(setItems).catch(console.error) }, []); if (!items) return <div className="p-8 text-slate-400">Loading saved documents…</div>; return <div className="mx-auto max-w-5xl space-y-6"><h1 className="flex items-center gap-2 text-3xl font-extrabold text-white"><Bookmark className="text-brand-400"/> Saved documents</h1>{items.length === 0 ? <div className="rounded-xl border border-dashed border-slate-700 p-12 text-center text-slate-500">No saved documents yet.</div> : <div className="space-y-3">{items.map(item => <Link key={item.id} to={`/articles/${item.id}`} className="block rounded-xl border border-slate-800 bg-slate-900/30 p-5 hover:border-brand-500/50"><h2 className="font-semibold text-white">{item.title}</h2><p className="mt-1 text-xs text-slate-500">{item.dept} · {item.domain}</p></Link>)}</div>}</div> }

@@ -18,13 +18,25 @@ import ProtectedRoute from './ProtectedRoute'
 import UsersPage from '../pages/admin/UsersPage'
 import ConnectorsPage from '../pages/admin/ConnectorsPage'
 import FeatureFlagsPage from '../pages/admin/FeatureFlagsPage'
+import HomePage from '../pages/HomePage'
+import BrowsePage from '../pages/BrowsePage'
+import BookmarksPage from '../pages/BookmarksPage'
+import SourcesPage from '../pages/SourcesPage'
+import PermissionsPage from '../pages/PermissionsPage'
+import TemplatesPage from '../pages/TemplatesPage'
 
 export default function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/" element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
-        <Route index element={<Navigate to="/articles" replace />} />
+        <Route index element={<HomePage />} />
+        <Route path="home" element={<HomePage />} />
+        <Route path="browse" element={<BrowsePage />} />
+        <Route path="bookmarks" element={<BookmarksPage />} />
+        <Route path="sources" element={<SourcesPage />} />
+        <Route path="permissions" element={<PermissionsPage />} />
+        <Route path="templates" element={<TemplatesPage />} />
         <Route path="articles" element={<ArticleListPage />} />
         <Route path="articles/new" element={<ArticleEditPage />} />
         <Route path="articles/:id" element={<ArticleDetailPage />} />

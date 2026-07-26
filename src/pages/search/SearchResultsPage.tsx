@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Search as SearchIcon, Filter, Layers, Shield, FileText, ArrowRight, X } from 'lucide-react'
 import { search } from '../../api/search'
 import { useLanguage } from '../../i18n/LanguageProvider'
+import { requestContent } from '../../api/knowledge'
 
 export default function SearchResultsPage() {
   const [query, setQuery] = useState('')
@@ -11,6 +12,7 @@ export default function SearchResultsPage() {
   const [results, setResults] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [searched, setSearched] = useState(false)
+  const [requested, setRequested] = useState(false)
   
   const navigate = useNavigate()
   const { t } = useLanguage()
@@ -130,7 +132,8 @@ export default function SearchResultsPage() {
         <div className="rounded-xl border border-dashed border-slate-850 p-12 text-center bg-slate-900/5">
           <Layers className="mx-auto text-slate-600 mb-3" size={40} />
           <h3 className="text-md font-semibold text-white">{t('search.noMatches')}</h3>
-          <p className="text-slate-500 text-xs mt-1">This query has been logged in the Governance Queue to improve coverage.</p>
+          <p className="text-slate-500 text-xs mt-1">No authorized document matched this query.</p>
+          <button type="button" disabled={requested} onClick={() => void requestContent(query, dept || undefined).then(() => setRequested(true))} className="mt-5 rounded-lg bg-brand-600 px-4 py-2 text-xs font-semibold text-white hover:bg-brand-500 disabled:opacity-60">{requested ? 'Content request submitted' : 'Request this content'}</button>
         </div>
       ) : (
         <div className="space-y-4">
