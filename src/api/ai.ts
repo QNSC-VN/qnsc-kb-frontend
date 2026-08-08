@@ -1,4 +1,4 @@
-import client, { clearExpiredSession, refreshSession } from './client'
+import client, { clearExpiredSession, getAccessToken, refreshSession } from './client'
 
 export async function askAI(question: string, conversation_id?: string) {
   const response = await client.post('/ai/ask', { question, conversation_id })
@@ -14,7 +14,7 @@ export async function askAIStream(
   retry = true,
 ) {
   const baseUrl = import.meta.env.VITE_API_BASE_URL || '/api/v1'
-  const token = localStorage.getItem('token')
+  const token = getAccessToken()
   const response = await fetch(`${baseUrl}/ai/ask/stream`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },

@@ -1,19 +1,46 @@
 import React, { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { ArrowLeft, Save, Shield, HelpCircle, Lock } from 'lucide-react'
+import { ArrowLeft, Check, ChevronDown, Save, X } from 'lucide-react'
 import { getArticle, createArticle, updateArticle } from '../../api/articles'
-import { getAccessGroups } from '../../api/search'
+import { listDepartments } from '../../api/auth'
+import { useAuth } from '../../auth/useAuth'
 import { useDialog } from '../../components/ui/DialogProvider'
 
-const ARTICLE_TEMPLATES: Record<string, string> = {
-  POLICY: '# Purpose\n\n## Scope\n\n## Policy\n\n## Responsibilities\n\n## Exceptions\n\n## Review and approval\n',
-  SOP: '# Purpose\n\n## Prerequisites\n\n## Procedure\n\n1. \n\n## Verification\n\n## Rollback or escalation\n',
-  DECISION: '# Decision\n\n## Context\n\n## Options considered\n\n## Decision and rationale\n\n## Consequences\n\n## Owners and follow-up\n',
-  FAQ: '# Frequently asked question\n\n## Question\n\n## Answer\n\n## Related resources\n',
-  RCA: '# Root cause analysis\n\n## Incident summary\n\n## Impact\n\n## Timeline\n\n## Root cause\n\n## Corrective actions\n',
-  HOWTO: '# How to…\n\n## When to use this\n\n## Steps\n\n1. \n\n## Troubleshooting\n',
-  PLAYBOOK: '# Playbook\n\n## Trigger\n\n## Roles\n\n## Response steps\n\n1. \n\n## Exit criteria\n',
-  REFERENCE: '# Reference\n\n## Summary\n\n## Details\n\n## Examples\n\n## Related links\n',
+const ARTICLE_TEMPLATE = '# Purpose\n\n## Summary\n\n## Procedure or details\n\n## Ownership and review\n'
+type Department = { id: string; name: string; company_domain: string; active: boolean }
+
+function DepartmentPicker({ value, options, onChange }: { value: string[]; options: Department[]; onChange: (value: string[]) => void }) {
+  const [open, setOpen] = useState(false)
+  const selected = value.map(id => options.find(item => item.id === id)).filter(Boolean) as Department[]
+  const toggle = (id: string) => onChange(value.includes(id) ? value.filter(item => item !== id) : [...value, id])
+
+  return <div className="relative">
+    <div className="mb-1.5 flex items-center justify-between gap-2">
+      <label className="block text-xs font-semibold text-slate-400">Departments</label>
+      <span className="text-[10px] font-semibold text-slate-500">{selected.length} selected</span>
+    </div>
+    <button type="button" aria-expanded={open} onClick={() => setOpen(current => !current)} className="flex min-h-11 w-full items-center justify-between gap-3 rounded-lg border border-slate-800 bg-slate-950 px-3 text-left text-xs text-white outline-none transition hover:border-brand-500/70 focus:border-brand-500">
+      <span className={selected.length ? 'font-semibold text-white' : 'text-slate-500'}>{selected.length ? `${selected.length} department${selected.length === 1 ? '' : 's'} selected` : 'Choose departments'}</span>
+      <ChevronDown size={15} className={`shrink-0 text-slate-500 transition ${open ? 'rotate-180 text-brand-400' : ''}`} />
+    </button>
+    {open && <div className="absolute inset-x-0 top-[calc(100%+5px)] z-30 overflow-hidden rounded-xl border border-slate-700 bg-slate-900 p-1.5 shadow-2xl shadow-black/40">
+      <div className="flex items-center justify-between border-b border-slate-800 px-2.5 py-2">
+        <span className="text-[10px] font-bold uppercase tracking-[.14em] text-slate-500">Article visibility</span>
+        {selected.length > 0 && <button type="button" onClick={() => onChange([])} className="text-[10px] font-semibold text-brand-400 hover:text-brand-300">Clear all</button>}
+      </div>
+      <div className="max-h-52 overflow-y-auto py-1">
+        {options.length ? options.map(item => { const checked = value.includes(item.id); return <button key={item.id} type="button" onClick={() => toggle(item.id)} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2.5 text-left text-xs text-slate-200 transition hover:bg-slate-800">
+          <span className={`grid h-4 w-4 shrink-0 place-items-center rounded border ${checked ? 'border-brand-500 bg-brand-500 text-white' : 'border-slate-600 bg-slate-950'}`}>{checked && <Check size={11} strokeWidth={3} />}</span>
+          <span className="min-w-0 flex-1 truncate font-semibold">{item.name}</span>
+          {checked && value[0] === item.id && <span className="text-[10px] font-semibold text-brand-400">Primary</span>}
+        </button> }) : <p className="px-2.5 py-3 text-xs text-slate-500">No departments available.</p>}
+      </div>
+    </div>}
+    {selected.length > 0 && <div className="mt-2 flex flex-wrap gap-1.5">{selected.map((item, index) => <span key={item.id} className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 text-[10px] font-semibold ${index === 0 ? 'border-brand-500/30 bg-brand-500/10 text-brand-300' : 'border-slate-700 bg-slate-800 text-slate-300'}`}>
+      {item.name}{index === 0 && <span className="text-[9px] uppercase tracking-wide opacity-70">primary</span>}
+      <button type="button" aria-label={`Remove ${item.name}`} onClick={() => toggle(item.id)} className="rounded-full p-0.5 hover:bg-white/10"><X size={11} /></button>
+    </span>)}</div>}
+  </div>
 }
 
 export default function ArticleEditPage() {
@@ -25,44 +52,45 @@ export default function ArticleEditPage() {
   // Form states
   const [title, setTitle] = useState('')
   const [bodyMd, setBodyMd] = useState('')
-  const [dept, setDept] = useState('Engineering')
-  const [domain, setDomain] = useState('General')
-  const [type, setType] = useState('SOP')
-  const [sensitivity, setSensitivity] = useState('internal')
+  const [dept, setDept] = useState('')
+  const [departmentIds, setDepartmentIds] = useState<string[]>([])
   const [language, setLanguage] = useState('en')
   const [status, setStatus] = useState('draft')
   const [tagsInput, setTagsInput] = useState('')
-  const [selectedGroups, setSelectedGroups] = useState<string[]>([])
   const [nextReview, setNextReview] = useState('')
 
-  const [availableGroups, setAvailableGroups] = useState<any[]>([])
+  const [departments, setDepartments] = useState<Department[]>([])
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const { user } = useAuth()
+  const visibleDepartments = departments.filter(item => item.active && item.company_domain === user?.company_domain)
 
   useEffect(() => {
     const fetchSetupData = async () => {
       setLoading(true)
       try {
-        // Fetch groups
-        const groups = await getAccessGroups()
-        setAvailableGroups(groups)
+        const departmentData = await listDepartments() as Department[]
+        setDepartments(departmentData)
 
         if (isEditMode && id) {
           const art = await getArticle(id)
           setTitle(art.title)
           setBodyMd(art.body_md)
           setDept(art.dept)
-          setDomain(art.domain)
-          setType(art.type)
-          setSensitivity(art.sensitivity)
+          const articleDepartmentIds = art.departments?.length ? art.departments.map((item: { id: string; name?: string }) => item.id) : departmentData.filter(item => item.name === art.dept).map(item => item.id)
+          const primaryDepartmentId = art.departments?.find((item: { id: string; name?: string }) => item.name === art.dept)?.id || articleDepartmentIds[0]
+          setDepartmentIds(primaryDepartmentId ? [primaryDepartmentId, ...articleDepartmentIds.filter((item: string) => item !== primaryDepartmentId)] : [])
           setLanguage(art.language || 'en')
           setStatus(art.status)
           setTagsInput(art.tags ? art.tags.map((t: any) => t.tag).join(', ') : '')
-          setSelectedGroups(art.access_groups ? art.access_groups.map((g: any) => g.id) : [])
           if (art.next_review) {
             setNextReview(new Date(art.next_review).toISOString().split('T')[0])
           }
+        } else {
+          const defaultDepartment = departmentData.find(item => item.active && item.company_domain === user?.company_domain && item.name === user?.dept)
+            || departmentData.find(item => item.active && item.company_domain === user?.company_domain)
+          if (defaultDepartment) { setDept(defaultDepartment.name); setDepartmentIds([defaultDepartment.id]) }
         }
       } catch (err) {
         console.error(err)
@@ -72,11 +100,15 @@ export default function ArticleEditPage() {
       }
     }
     fetchSetupData()
-  }, [id, isEditMode])
+  }, [id, isEditMode, user?.dept, user?.company_domain])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+    if (!departmentIds.length) {
+      setError('Select at least one department for this article')
+      return
+    }
     setSaving(true)
 
     // Parse comma separated tags
@@ -89,23 +121,20 @@ export default function ArticleEditPage() {
       title,
       body_md: bodyMd,
       dept,
-      domain,
-      type,
-      sensitivity,
+      department_ids: departmentIds,
       language,
       status,
       tags,
-      access_group_ids: selectedGroups.length > 0 ? selectedGroups : null,
       next_review: nextReview ? new Date(nextReview).toISOString() : null
     }
 
     try {
       if (isEditMode && id) {
         await updateArticle(id, payload)
-        navigate(`/articles/${id}`)
+        navigate('/governance/pending-drafts')
       } else {
-        const created = await createArticle(payload)
-        navigate(`/articles/${created.id}`)
+        await createArticle(payload)
+        navigate('/governance/pending-drafts')
       }
     } catch (err: any) {
       console.error(err)
@@ -115,20 +144,12 @@ export default function ArticleEditPage() {
     }
   }
 
-  const handleGroupSelect = (groupId: string) => {
-    if (selectedGroups.includes(groupId)) {
-      setSelectedGroups(selectedGroups.filter(g => g !== groupId))
-    } else {
-      setSelectedGroups([...selectedGroups, groupId])
-    }
+  const insertTemplate = async () => {
+    if (bodyMd.trim() && !(await dialog.confirm('Replace the current body with the basic article template?', { title: 'Replace article body', confirmLabel: 'Replace', tone: 'info' }))) return
+    setBodyMd(ARTICLE_TEMPLATE)
   }
 
-  const insertTemplate = async () => {
-    const template = ARTICLE_TEMPLATES[type]
-    if (!template) return
-    if (bodyMd.trim() && !(await dialog.confirm('Replace the current body with the selected template?', { title: 'Replace article body', confirmLabel: 'Replace', tone: 'info' }))) return
-    setBodyMd(template)
-  }
+  const articleDepartments = departments.filter(item => (item.active && item.company_domain === user?.company_domain) || departmentIds.includes(item.id))
 
   if (loading) {
     return (
@@ -150,7 +171,7 @@ export default function ArticleEditPage() {
           <span>Back</span>
         </button>
         <h1 className="text-xl font-bold text-white">
-          {isEditMode ? 'Modify Article' : 'Draft New Article'}
+          {isEditMode ? 'Modify Article' : 'Submit New Article'}
         </h1>
       </div>
 
@@ -182,7 +203,7 @@ export default function ArticleEditPage() {
             <div className="flex items-center justify-between">
               <label className="block text-sm font-semibold text-slate-300">Body Markdown</label>
               <button type="button" onClick={insertTemplate} className="text-xs font-semibold text-brand-400 hover:text-brand-300">
-                Insert {type} template
+                Insert basic template
               </button>
             </div>
             <textarea
@@ -217,62 +238,8 @@ export default function ArticleEditPage() {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1.5">Department</label>
-                <select
-                  value={dept}
-                  onChange={(e) => setDept(e.target.value)}
-                  className="w-full rounded-lg border border-slate-800 bg-slate-950 py-2 px-2.5 text-xs text-white outline-none focus:border-brand-500"
-                >
-                  <option value="Engineering">Engineering</option>
-                  <option value="Security">Security</option>
-                  <option value="Human Resources">Human Resources</option>
-                  <option value="Legal">Legal</option>
-                  <option value="Operations">Operations</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1.5">Domain Context</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Infrastructure, SOPs"
-                  value={domain}
-                  onChange={(e) => setDomain(e.target.value)}
-                  className="w-full rounded-lg border border-slate-800 bg-slate-950 py-2 px-2.5 text-xs text-white outline-none focus:border-brand-500"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1.5">Document Type</label>
-                <select
-                  value={type}
-                  onChange={(e) => setType(e.target.value)}
-                  className="w-full rounded-lg border border-slate-800 bg-slate-950 py-2 px-2.5 text-xs text-white outline-none focus:border-brand-500"
-                >
-                  <option value="POLICY">Policy</option>
-                  <option value="SOP">SOP</option>
-                  <option value="DECISION">Decision Log</option>
-                  <option value="FAQ">FAQ</option>
-                  <option value="RCA">RCA</option>
-                  <option value="HOWTO">How-To</option>
-                  <option value="PLAYBOOK">Playbook</option>
-                  <option value="REFERENCE">Reference</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1.5">Sensitivity</label>
-                <select
-                  value={sensitivity}
-                  onChange={(e) => setSensitivity(e.target.value)}
-                  className="w-full rounded-lg border border-slate-800 bg-slate-950 py-2 px-2.5 text-xs text-white outline-none focus:border-brand-500"
-                >
-                  <option value="public">Public (Everyone)</option>
-                  <option value="internal">Internal (Staff)</option>
-                  <option value="confidential">Confidential</option>
-                  <option value="restricted">Restricted</option>
-                </select>
+                <DepartmentPicker value={departmentIds} options={articleDepartments} onChange={ids => { setDepartmentIds(ids); setDept(articleDepartments.find(item => item.id === ids[0])?.name || '') }} />
+                <p className="mt-1.5 text-[11px] leading-5 text-slate-500">Select all departments that should access this article. The first selected department is the primary department.</p>
               </div>
 
               <div>
@@ -317,35 +284,6 @@ export default function ArticleEditPage() {
             </div>
           </div>
 
-          {/* Access groups scoping */}
-          <div className="bg-slate-900/30 border border-slate-800/80 rounded-xl p-5 space-y-4">
-            <h3 className="text-sm font-semibold text-slate-300 uppercase tracking-wider border-b border-slate-800 pb-2 flex items-center gap-1.5">
-              <Lock size={14} className="text-slate-400" />
-              <span>Scoping Groups</span>
-            </h3>
-
-            {availableGroups.length === 0 ? (
-              <p className="text-xs text-slate-500">No custom access groups registered.</p>
-            ) : (
-              <div className="space-y-2">
-                {availableGroups.map((g) => (
-                  <label 
-                    key={g.id} 
-                    className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer select-none py-1 hover:text-white"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedGroups.includes(g.id)}
-                      onChange={() => handleGroupSelect(g.id)}
-                      className="rounded bg-slate-950 border-slate-800 text-brand-500 focus:ring-0 focus:ring-offset-0"
-                    />
-                    <span>{g.name}</span>
-                  </label>
-                ))}
-              </div>
-            )}
-          </div>
-
           {/* Save button */}
           <button
             type="submit"
@@ -353,7 +291,7 @@ export default function ArticleEditPage() {
             className="w-full bg-brand-600 hover:bg-brand-500 text-white font-semibold text-sm py-3 px-4 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-brand-600/20 hover:shadow-brand-500/35 transition-all disabled:opacity-50"
           >
             <Save size={16} />
-            <span>{saving ? 'Saving...' : isEditMode ? 'Save Changes' : 'Publish Article'}</span>
+            <span>{saving ? 'Saving...' : 'Submit for approval'}</span>
           </button>
         </div>
 

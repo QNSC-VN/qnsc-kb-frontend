@@ -1,21 +1,34 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Search as SearchIcon, Filter, Layers, Shield, FileText, ArrowRight, X } from 'lucide-react'
 import { search } from '../../api/search'
+import { listDepartments } from '../../api/auth'
+import { useAuth } from '../../auth/useAuth'
 import { useLanguage } from '../../i18n/LanguageProvider'
 import { requestContent } from '../../api/knowledge'
 
 export default function SearchResultsPage() {
   const [query, setQuery] = useState('')
   const [dept, setDept] = useState('')
-  const [sensitivity, setSensitivity] = useState('')
   const [results, setResults] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [searched, setSearched] = useState(false)
   const [requested, setRequested] = useState(false)
+  const [departments, setDepartments] = useState<{ id: string; name: string; company_domain: string; active: boolean }[]>([])
   
   const navigate = useNavigate()
   const { t } = useLanguage()
+  const { user } = useAuth()
+
+  useEffect(() => {
+    void listDepartments().then(setDepartments).catch((err) => console.error('Failed to load departments', err))
+  }, [])
+
+  const visibleDepartments = departments.filter(item => item.active && item.company_domain === user?.company_domain)
+
+  useEffect(() => {
+    if (dept && !visibleDepartments.some(item => item.name === dept)) setDept('')
+  }, [dept, visibleDepartments])
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -27,7 +40,6 @@ export default function SearchResultsPage() {
       const data = await search({
         q: query,
         dept: dept || undefined,
-        sensitivity: sensitivity || undefined,
         limit: 10
       })
       setResults(data)
@@ -40,7 +52,6 @@ export default function SearchResultsPage() {
 
   const clearFilters = () => {
     setDept('')
-    setSensitivity('')
   }
 
   return (
@@ -88,28 +99,12 @@ export default function SearchResultsPage() {
               className="rounded-lg border border-slate-800 bg-slate-950 py-1.5 px-2.5 text-slate-300 outline-none focus:border-brand-500"
             >
               <option value="">All Departments</option>
-              <option value="Engineering">Engineering</option>
-              <option value="Security">Security</option>
-              <option value="Human Resources">HR</option>
-              <option value="Legal">Legal</option>
-              <option value="Operations">Operations</option>
+              {visibleDepartments.map(item => <option key={item.id} value={item.name}>{item.name}</option>)}
             </select>
 
-            {/* Sensitivity */}
-            <select
-              value={sensitivity}
-              onChange={(e) => setSensitivity(e.target.value)}
-              className="rounded-lg border border-slate-800 bg-slate-950 py-1.5 px-2.5 text-slate-300 outline-none focus:border-brand-500"
-            >
-              <option value="">All Sensitivity</option>
-              <option value="public">Public</option>
-              <option value="internal">Internal</option>
-              <option value="confidential">Confidential</option>
-              <option value="restricted">Restricted</option>
-            </select>
           </div>
 
-          {(dept || sensitivity) && (
+          {dept && (
             <button
               type="button"
               onClick={clearFilters}
@@ -145,9 +140,6 @@ export default function SearchResultsPage() {
             >
               <div className="space-y-2.5 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="bg-slate-850 text-slate-300 px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider">
-                    {res.type}
-                  </span>
                   <span className="bg-slate-850 text-slate-300 px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider">
                     {res.dept}
                   </span>

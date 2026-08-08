@@ -1,17 +1,21 @@
 import client from './client'
 
-export async function uploadSource(file: File, tags: string[] = []) {
+export async function uploadSource(file: File, tags: string[] = [], dept?: string, departmentIds: string[] = []) {
   const form = new FormData()
   form.append('file', file)
   form.append('tags', JSON.stringify(tags))
+  if (dept) form.append('dept', dept)
+  if (departmentIds.length) form.append('department_ids', JSON.stringify(departmentIds))
   const response = await client.post('/articles/upload-source', form)
   return response.data
 }
 
-export async function uploadSources(files: File[], tagsByFile: string[][] = []) {
+export async function uploadSources(files: File[], tagsByFile: string[][] = [], dept?: string, departmentIds: string[] = []) {
   const form = new FormData()
   files.forEach((file) => form.append('files', file))
   tagsByFile.forEach((tags) => form.append('tags', JSON.stringify(tags)))
+  if (dept) form.append('dept', dept)
+  if (departmentIds.length) form.append('department_ids', JSON.stringify(departmentIds))
   const response = await client.post('/articles/upload-sources', form)
   return response.data
 }
@@ -21,13 +25,23 @@ export async function getPendingDrafts(status?: string) {
   return response.data
 }
 
-export async function approveDraft(id: string, type: string, dept: string, updateArticleId?: string, treatAsNew = false) {
-  const response = await client.post(`/governance/pending-drafts/${id}/approve`, { type, dept, update_article_id: updateArticleId || null, treat_as_new: treatAsNew })
+export async function approveDraft(id: string, dept: string, updateArticleId?: string, treatAsNew = false) {
+  const response = await client.post(`/governance/pending-drafts/${id}/approve`, { dept, update_article_id: updateArticleId || null, treat_as_new: treatAsNew })
   return response.data
 }
 
-export async function rejectDraft(id: string) {
-  const response = await client.post(`/governance/pending-drafts/${id}/reject`)
+export async function assignDraftApprover(id: string, approverId: string) {
+  const response = await client.post(`/governance/pending-drafts/${id}/assign-approver`, { approver_id: approverId })
+  return response.data
+}
+
+export async function getEligibleApprovers(id: string) {
+  const response = await client.get(`/governance/pending-drafts/${id}/eligible-approvers`)
+  return response.data
+}
+
+export async function rejectDraft(id: string, reviewNote: string) {
+  const response = await client.post(`/governance/pending-drafts/${id}/reject`, { review_note: reviewNote })
   return response.data
 }
 

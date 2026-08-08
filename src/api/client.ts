@@ -1,21 +1,20 @@
 import axios from 'axios'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1'
+let accessToken: string | null = null
 
 const client = axios.create({
   baseURL: API_BASE_URL,
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
 })
 
 export async function refreshSession(): Promise<boolean> {
-  const refreshToken = localStorage.getItem('refresh_token')
-  if (!refreshToken) return false
   try {
-    const response = await axios.post(`${API_BASE_URL}/auth/refresh`, { refresh_token: refreshToken }, { headers: { 'Content-Type': 'application/json' } })
-    localStorage.setItem('token', response.data.access_token)
-    localStorage.setItem('refresh_token', response.data.refresh_token)
+    const response = await client.post('/auth/refresh')
+    accessToken = response.data.access_token
     localStorage.setItem('user', JSON.stringify(response.data.user))
     return true
   } catch {
@@ -24,10 +23,17 @@ export async function refreshSession(): Promise<boolean> {
 }
 
 export function clearExpiredSession() {
-  localStorage.removeItem('token')
-  localStorage.removeItem('refresh_token')
+  accessToken = null
   localStorage.removeItem('user')
   if (window.location.pathname !== '/login') window.location.assign('/login?expired=1')
+}
+
+export function setAccessToken(token: string | null) {
+  accessToken = token
+}
+
+export function getAccessToken() {
+  return accessToken
 }
 
 client.interceptors.request.use((config) => {
@@ -35,9 +41,8 @@ client.interceptors.request.use((config) => {
   if (typeof FormData !== 'undefined' && config.data instanceof FormData && config.headers) {
     delete config.headers['Content-Type']
   }
-  const token = localStorage.getItem('token')
-  if (token && config.headers) {
-    config.headers.Authorization = `Bearer ${token}`
+  if (accessToken && config.headers) {
+    config.headers.Authorization = `Bearer ${accessToken}`
   }
   return config
 })
@@ -50,7 +55,7 @@ client.interceptors.response.use(
       request._authRetry = true
       if (await refreshSession()) {
         request.headers = request.headers || {}
-        request.headers.Authorization = `Bearer ${localStorage.getItem('token')}`
+        request.headers.Authorization = `Bearer ${accessToken}`
         return client(request)
       }
       clearExpiredSession()

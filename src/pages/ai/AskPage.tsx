@@ -16,6 +16,7 @@ import { useDialog } from '../../components/ui/DialogProvider'
 import { useLanguage } from '../../i18n/LanguageProvider'
 
 interface Citation {
+  source_index?: number
   article_id: string
   title: string
   section_ref?: string
@@ -595,7 +596,7 @@ export default function AskPage() {
                                     style={{ animationDelay: `${citationIndex * 40}ms` }}
                                     className="ask-fade-up flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left transition-all duration-150 hover:translate-x-0.5 hover:bg-surface hover:shadow-sm"
                                   >
-                                    <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-blue-500/20 text-[11px] font-semibold text-blue-300 transition-transform duration-150 group-hover:scale-105">{citationIndex + 1}</span>
+                                    <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-blue-500/20 text-[11px] font-semibold text-blue-300 transition-transform duration-150 group-hover:scale-105">{citation.source_index ?? citationIndex + 1}</span>
                                     <FileText size={14} className="shrink-0 text-stone" />
                                     <span className="truncate text-[13px] text-steel">{citation.title}</span>
                                     <span className="ml-auto shrink-0 text-[11px] text-stone">{citation.section_ref || 'General'}</span>

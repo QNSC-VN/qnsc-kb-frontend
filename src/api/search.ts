@@ -1,6 +1,6 @@
 import client from './client'
 
-export async function search(params: { q: string; dept?: string; sensitivity?: string; limit?: number }) {
+export async function search(params: { q: string; dept?: string; limit?: number }) {
   const response = await client.get('/search', { params })
   return response.data
 }
@@ -13,15 +13,5 @@ export async function getTags() {
 
 export async function getGlossary() {
   const response = await client.get('/meta/glossary')
-  return response.data
-}
-
-export async function getTaxonomy() {
-  const response = await client.get('/meta/taxonomy')
-  return response.data
-}
-
-export async function getAccessGroups() {
-  const response = await client.get('/meta/groups')
   return response.data
 }

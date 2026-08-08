@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { setAccessToken } from '../api/client'
 
 interface AuthState {
   token: string | null
@@ -9,19 +10,17 @@ interface AuthState {
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
-  token: localStorage.getItem('token'),
-  refreshToken: localStorage.getItem('refresh_token'),
+  token: null,
+  refreshToken: null,
   user: JSON.parse(localStorage.getItem('user') || 'null'),
   setAuth: (token, user, refreshToken) => {
-    localStorage.setItem('token', token)
+    setAccessToken(token)
     localStorage.setItem('user', JSON.stringify(user))
-    if (refreshToken) localStorage.setItem('refresh_token', refreshToken)
-    set({ token, refreshToken: refreshToken || localStorage.getItem('refresh_token'), user })
+    set({ token, refreshToken: null, user })
   },
   clearAuth: () => {
-    localStorage.removeItem('token')
     localStorage.removeItem('user')
-    localStorage.removeItem('refresh_token')
+    setAccessToken(null)
     set({ token: null, refreshToken: null, user: null })
   }
 }))

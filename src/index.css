@@ -1,132 +1,159 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* Semantic values only live here. Components consume the token names through
+   Tailwind utilities (bg-background, text-foreground, border-border, etc.). */
+:root,
+:root[data-theme='light'] {
+  --background: 241 245 249;
+  --foreground: 20 32 47;
+  --surface: 248 250 252;
+  --surface-elevated: 255 255 255;
+  --surface-muted: 230 237 244;
+  --muted: 91 108 128;
+  --muted-foreground: 65 81 102;
+  --border: 203 214 226;
+  --input: 255 255 255;
+  --primary: 55 88 197;
+  --primary-strong: 39 68 165;
+  --primary-muted: 76 109 214;
+  --primary-soft: 224 231 255;
+  --primary-foreground: 255 255 255;
+  --secondary: 225 233 242;
+  --secondary-foreground: 37 52 71;
+  --accent: 13 129 150;
+  --accent-foreground: 255 255 255;
+  --success: 18 132 96;
+  --warning: 176 104 14;
+  --destructive: 193 59 63;
+  --info: 20 122 180;
+  --ring: 56 99 212;
+  --sidebar: 232 238 245;
+  --sidebar-active: 215 227 255;
+  --sidebar-hover: 220 229 239;
+  --header: 248 250 252;
+  --shadow: 30 46 68;
+  --scrollbar: 138 156 178;
+}
+
+:root[data-theme='dark'] {
+  --background: 14 22 32;
+  --foreground: 232 238 246;
+  --surface: 21 32 45;
+  --surface-elevated: 27 42 57;
+  --surface-muted: 33 49 65;
+  --muted: 136 153 173;
+  --muted-foreground: 166 181 199;
+  --border: 48 66 85;
+  --input: 16 27 38;
+  --primary: 100 132 242;
+  --primary-strong: 76 107 217;
+  --primary-muted: 156 178 255;
+  --primary-soft: 37 53 93;
+  --primary-foreground: 247 249 255;
+  --secondary: 39 55 73;
+  --secondary-foreground: 218 227 238;
+  --accent: 90 196 220;
+  --accent-foreground: 8 27 34;
+  --success: 78 190 141;
+  --warning: 237 182 84;
+  --destructive: 239 117 120;
+  --info: 102 213 245;
+  --ring: 125 158 255;
+  --sidebar: 17 27 38;
+  --sidebar-active: 39 58 81;
+  --sidebar-hover: 31 47 63;
+  --header: 16 26 37;
+  --shadow: 2 8 20;
+  --scrollbar: 78 99 124;
+}
+
 @layer base {
-  :root { font-family: 'DM Sans', Inter, Helvetica, Arial, sans-serif; }
-  html { font-size: 14px; }
-  body { @apply bg-canvas text-ink antialiased selection:bg-coral/20; }
-  button, input, textarea, select { font: inherit; font-size: 0.875rem; }
-  input, textarea, select {
-    color-scheme: dark;
-    background-color: #171e27 !important;
-    color: #f4f7fb !important;
-    border-color: #3a4859 !important;
-  }
-  input::placeholder, textarea::placeholder { color: #8793a3 !important; opacity: 1; }
-  select option, select optgroup { background-color: #171e27 !important; color: #f4f7fb !important; }
+  :root { font-family: 'DM Sans', Inter, ui-sans-serif, system-ui, sans-serif; font-synthesis: none; }
+  html { font-size: 14px; background: rgb(var(--background)); }
+  body { min-width: 320px; background: rgb(var(--background)); color: rgb(var(--foreground)); -webkit-font-smoothing: antialiased; transition: background-color .18s ease, color .18s ease; }
+  button, input, textarea, select { font: inherit; }
+  button { -webkit-tap-highlight-color: transparent; }
+  input, textarea, select { color-scheme: light dark; }
+  select { padding-right: 2rem; }
+  input::placeholder, textarea::placeholder { color: rgb(var(--muted)); opacity: 1; }
+  ::selection { color: rgb(var(--primary-foreground)); background: rgb(var(--primary)); }
+  :focus-visible { outline: 2px solid rgb(var(--ring)); outline-offset: 2px; }
 }
 
 @layer components {
-  .field { @apply w-full rounded-lg border border-hairline bg-surface-soft px-3 py-2 text-sm text-ink outline-none focus:border-cyan; }
-  .label { @apply mb-1 block text-[11px] font-semibold uppercase tracking-wide text-stone; }
-  .mm-card { @apply rounded-2xl border border-hairline bg-white; }
-  .mm-pill { @apply rounded-full; }
-  .mm-primary { @apply mm-pill bg-ink text-white transition-colors hover:bg-charcoal; }
-  .mm-secondary { @apply mm-pill border border-ink bg-white text-ink transition-colors hover:bg-surface; }
+  .field { @apply w-full min-h-10 rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground outline-none transition focus:border-ring focus:ring-2 focus:ring-ring/20; }
+  .label { @apply mb-1 block text-[11px] font-semibold uppercase tracking-[.12em] text-muted-foreground; }
+  .mm-card { @apply rounded-xl border border-border bg-card shadow-[0_10px_28px_rgb(var(--shadow)/.10)]; }
+  .mm-pill { @apply rounded-lg; }
+  .mm-primary { @apply mm-pill bg-primary text-primary-foreground shadow-[0_7px_18px_rgb(var(--shadow)/.16)] transition hover:bg-primary/90; }
+  .mm-secondary { @apply mm-pill border border-border bg-surface text-foreground transition hover:bg-surface-soft; }
+  .theme-select { @apply cursor-pointer rounded-lg border border-border bg-surface px-2.5 py-2 text-xs font-semibold text-foreground outline-none transition hover:bg-surface-soft focus:border-ring focus:ring-2 focus:ring-ring/20; }
+  .ops-shell-glow { background: radial-gradient(ellipse at top, rgb(var(--primary) / .11), transparent 66%); }
+  .ops-header { background: rgb(var(--header) / .92); }
+  .ops-sidebar { background: rgb(var(--sidebar)); }
+  .ops-sidebar-active { background: rgb(var(--sidebar-active)); }
+  .ops-sidebar-hover:hover { background: rgb(var(--sidebar-hover)); }
+  .ops-elevated { background: rgb(var(--surface-elevated)); }
 }
 
-/* Quiet, dark scrollbar for the application shell. The track stays transparent
-   so scrolling does not introduce a bright vertical stripe beside the page. */
-.app-scroll {
-  scrollbar-width: thin;
-  scrollbar-color: #344354 transparent;
-}
-.app-scroll::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-.app-scroll::-webkit-scrollbar-track {
-  background: transparent;
-}
-.app-scroll::-webkit-scrollbar-thumb {
-  background: #344354;
-  border: 1px solid transparent;
-  border-radius: 999px;
-  background-clip: padding-box;
-}
-.app-scroll::-webkit-scrollbar-thumb:hover {
-  background: #50627a;
-  background-clip: padding-box;
-}
-
-.dialog-scroll {
-  scrollbar-width: thin;
-  scrollbar-color: #52657d transparent;
-  scrollbar-gutter: stable;
-}
-.dialog-scroll::-webkit-scrollbar {
-  width: 7px;
-}
-.dialog-scroll::-webkit-scrollbar-track {
-  background: transparent;
-  margin: 12px 0;
-}
-.dialog-scroll::-webkit-scrollbar-thumb {
-  background: #52657d;
-  border: 2px solid transparent;
-  border-radius: 999px;
-  background-clip: padding-box;
-}
-.dialog-scroll::-webkit-scrollbar-thumb:hover {
-  background: #6e86a3;
-  background-clip: padding-box;
-}
-
-.sidebar-scroll {
-  scrollbar-width: thin;
-  scrollbar-color: #4b5d73 transparent;
-  scrollbar-gutter: stable;
-}
-.sidebar-scroll::-webkit-scrollbar { width: 8px; }
-.sidebar-scroll::-webkit-scrollbar-track { background: transparent; margin: 6px 0; }
-.sidebar-scroll::-webkit-scrollbar-thumb {
-  background: #4b5d73;
-  border: 2px solid transparent;
-  border-radius: 999px;
-  background-clip: padding-box;
-}
-.sidebar-scroll::-webkit-scrollbar-thumb:hover { background: #6f87a3; background-clip: padding-box; }
-
-/* Legacy screen compatibility: keeps older route components on the light system
-   while they are gradually migrated to the MiniMax tokens above. */
+/* Compatibility mappings progressively bring existing feature pages into the
+   semantic system, avoiding a fragile per-component dark-mode conditional. */
 @layer utilities {
-  .bg-slate-950 { background-color: #ffffff !important; }
-  .bg-slate-900 { background-color: #f7f8fa !important; }
-  .bg-slate-800 { background-color: #f2f3f5 !important; }
-  .border-slate-800, .border-slate-700 { border-color: #e5e7eb !important; }
-  .text-slate-100, .text-slate-200 { color: #0a0a0a !important; }
-  .text-slate-300 { color: #222222 !important; }
-  .text-slate-400 { color: #5f5f5f !important; }
-  .text-slate-500, .text-slate-600 { color: #8e8e93 !important; }
+  .bg-slate-950, .bg-canvas { background-color: rgb(var(--background)) !important; }
+  .bg-slate-900, .bg-white { background-color: rgb(var(--surface-elevated)) !important; }
+  .bg-slate-800, .bg-surface { background-color: rgb(var(--surface)) !important; }
+  .bg-surface-soft { background-color: rgb(var(--surface-muted)) !important; }
+  .border-slate-800, .border-slate-700, .border-hairline, .border-hairline-soft { border-color: rgb(var(--border)) !important; }
+  /* Tailwind's slash-opacity variants are distinct generated utilities, so
+     map them explicitly instead of allowing raw white/slate values through. */
+  .bg-white\/95 { background-color: rgb(var(--surface-elevated) / .95) !important; }
+  .bg-white\/15 { background-color: rgb(var(--primary-foreground) / .15) !important; }
+  .bg-slate-950\/80, .bg-slate-950\/60, .bg-slate-950\/50, .bg-slate-950\/30 { background-color: rgb(var(--background) / .72) !important; }
+  .bg-slate-900\/80, .bg-slate-900\/60, .bg-slate-900\/40, .bg-slate-900\/30, .bg-slate-900\/20, .bg-slate-900\/10, .bg-slate-900\/5 { background-color: rgb(var(--surface) / .78) !important; }
+  .bg-slate-800\/60, .bg-slate-800\/40 { background-color: rgb(var(--surface-muted) / .82) !important; }
+  .border-slate-800\/80, .border-slate-800\/40, .border-slate-700\/80 { border-color: rgb(var(--border) / .84) !important; }
+  .text-slate-100, .text-slate-200, .text-white, .text-ink { color: rgb(var(--foreground)) !important; }
+  .text-slate-300, .text-charcoal { color: rgb(var(--secondary-foreground)) !important; }
+  .text-slate-400, .text-steel { color: rgb(var(--muted-foreground)) !important; }
+  .text-slate-500, .text-slate-600, .text-stone, .text-muted { color: rgb(var(--muted)) !important; }
+  .text-white\/60 { color: rgb(var(--primary-foreground) / .6) !important; }
+  .text-brand-300 { color: rgb(var(--primary-muted)) !important; }
+  .text-brand-400 { color: rgb(var(--primary-muted)) !important; }
+  .bg-brand-500 { background-color: rgb(var(--primary)) !important; }
+  .bg-brand-600 { background-color: rgb(var(--primary-strong)) !important; }
+  /* Legacy primary-action aliases must never resolve to the foreground token:
+     before this mapping, bg-ink + text-white could become #E8EEF6 on #E8EEF6. */
+  .bg-ink { background-color: rgb(var(--primary)) !important; }
+  .hover\:bg-charcoal:hover, .hover\:bg-slate-700:hover { background-color: rgb(var(--primary-strong)) !important; }
+  .bg-ink.text-white, .bg-brand-500.text-white, .bg-brand-600.text-white { color: rgb(var(--primary-foreground)) !important; }
+  .hover\:bg-slate-800:hover, .hover\:bg-surface:hover { background-color: rgb(var(--surface-muted)) !important; }
+  .hover\:bg-white:hover, .hover\:bg-slate-900:hover { background-color: rgb(var(--surface-elevated)) !important; }
+  .bg-cyan-50, .bg-cyan-50\/60, .bg-cyan-50\/70 { background-color: rgb(var(--info) / .10) !important; }
+  .bg-emerald-50 { background-color: rgb(var(--success) / .10) !important; }
+  .bg-amber-50 { background-color: rgb(var(--warning) / .10) !important; }
+  .bg-rose-50 { background-color: rgb(var(--destructive) / .10) !important; }
+  .text-cyan-700, .text-cyan-800 { color: rgb(var(--info)) !important; }
+  .text-emerald-600, .text-emerald-700 { color: rgb(var(--success)) !important; }
+  .text-amber-700 { color: rgb(var(--warning)) !important; }
+  .text-rose-600, .text-rose-700 { color: rgb(var(--destructive)) !important; }
+  .border-cyan-600, .border-cyan-700 { border-color: rgb(var(--info)) !important; }
+  .bg-cyan-700 { background-color: rgb(var(--primary)) !important; }
+  .bg-emerald-700 { background-color: rgb(var(--success)) !important; }
+  .hover\:bg-surface-soft:hover { background-color: rgb(var(--secondary)) !important; }
 }
 
-/* Dark product skin: preserve the MiniMax geometry while using a richer,
-   lower-glare workspace palette for the knowledge base. */
-@layer utilities {
-  body, .bg-canvas { background-color: #0f141b !important; }
-  .bg-white { background-color: #171e27 !important; }
-  .bg-surface { background-color: #1b2430 !important; }
-  .bg-surface-soft { background-color: #222d3a !important; }
-  .border-hairline, .border-hairline-soft { border-color: #2e3a49 !important; }
-  .text-ink { color: #f4f7fb !important; }
-  .text-charcoal { color: #d6dce5 !important; }
-  .text-steel { color: #a9b3c1 !important; }
-  .text-stone, .text-muted { color: #7f8b9a !important; }
-  .text-slate-100, .text-slate-200 { color: #f4f7fb !important; }
-  .text-slate-300, [class~="text-slate-350"] { color: #d6dce5 !important; }
-  .text-slate-400 { color: #a9b3c1 !important; }
-  .text-slate-500, .text-slate-600 { color: #8f9aaa !important; }
-  .text-brand-300 { color: #93c5fd !important; }
-  .text-brand-400 { color: #60a5fa !important; }
-  .placeholder-stone::placeholder { color: #718096 !important; }
-  .bg-slate-950 { background-color: #0f141b !important; }
-  .bg-slate-900 { background-color: #171e27 !important; }
-  .bg-slate-800 { background-color: #222d3a !important; }
-  .hover\:bg-surface:hover { background-color: #222d3a !important; }
-  .hover\:bg-surface-soft:hover { background-color: #273444 !important; }
-  .bg-blue-50 { background-color: rgba(20, 86, 240, 0.18) !important; }
-  .hover\:bg-blue-100:hover { background-color: rgba(20, 86, 240, 0.28) !important; }
+.app-scroll, .sidebar-scroll, .ask-scroll, .dialog-scroll { scrollbar-width: thin; scrollbar-color: rgb(var(--scrollbar)) transparent; }
+.app-scroll::-webkit-scrollbar, .sidebar-scroll::-webkit-scrollbar, .ask-scroll::-webkit-scrollbar, .dialog-scroll::-webkit-scrollbar { width: 7px; height: 7px; }
+.app-scroll::-webkit-scrollbar-thumb, .sidebar-scroll::-webkit-scrollbar-thumb, .ask-scroll::-webkit-scrollbar-thumb, .dialog-scroll::-webkit-scrollbar-thumb { background: rgb(var(--scrollbar)); border: 2px solid transparent; border-radius: 999px; background-clip: padding-box; }
+.app-scroll::-webkit-scrollbar-thumb:hover, .sidebar-scroll::-webkit-scrollbar-thumb:hover, .ask-scroll::-webkit-scrollbar-thumb:hover, .dialog-scroll::-webkit-scrollbar-thumb:hover { background: rgb(var(--muted-foreground)); background-clip: padding-box; }
+
+@media (max-width: 767px) {
+  .app-scroll { overscroll-behavior: contain; }
+  .app-scroll > * { max-width: 100%; }
+  table { min-width: 38rem; }
+  .field { font-size: 16px; }
 }

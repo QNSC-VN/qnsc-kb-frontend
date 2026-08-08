@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react'
 import { AlertCircle, UserPlus, Trash2, RefreshCw } from 'lucide-react'
 import { getSearchGaps, assignSearchGap, dismissSearchGap } from '../../api/governance'
+import { listDepartments } from '../../api/auth'
+import { useAuth } from '../../auth/useAuth'
 import { useDialog } from '../../components/ui/DialogProvider'
 
 export default function GapQueuePage() {
@@ -12,7 +14,9 @@ export default function GapQueuePage() {
   // Assignment Modal
   const [showAssignModal, setShowAssignModal] = useState(false)
   const [selectedGap, setSelectedGap] = useState<any>(null)
-  const [assignDept, setAssignDept] = useState('Engineering')
+  const [assignDept, setAssignDept] = useState('')
+  const [departments, setDepartments] = useState<{ id: string; name: string; company_domain: string; active: boolean }[]>([])
+  const { user } = useAuth()
 
   const fetchGaps = async () => {
     setLoading(true)
@@ -28,10 +32,15 @@ export default function GapQueuePage() {
 
   useEffect(() => {
     fetchGaps()
+    void listDepartments().then(setDepartments).catch(() => setDepartments([]))
   }, [])
+
+  const visibleDepartments = departments.filter(item => item.active && item.company_domain === (selectedGap?.company_domain || user?.company_domain))
 
   const handleAssignClick = (gap: any) => {
     setSelectedGap(gap)
+    const gapDepartments = departments.filter(item => item.active && item.company_domain === gap.company_domain)
+    setAssignDept(gapDepartments.find(item => item.name === user?.dept)?.name || gapDepartments[0]?.name || '')
     setShowAssignModal(true)
   }
 
@@ -146,11 +155,8 @@ export default function GapQueuePage() {
                 onChange={(e) => setAssignDept(e.target.value)}
                 className="w-full rounded-lg border border-slate-800 bg-slate-950 py-2 px-3 text-xs text-white outline-none focus:border-brand-500"
               >
-                <option value="Engineering">Engineering</option>
-                <option value="Security">Security</option>
-                <option value="Human Resources">HR</option>
-                <option value="Legal">Legal</option>
-                <option value="Operations">Operations</option>
+                <option value="">Select department</option>
+                {visibleDepartments.map(item => <option key={item.id} value={item.name}>{item.name}</option>)}
               </select>
             </div>
 
@@ -166,6 +172,7 @@ export default function GapQueuePage() {
               </button>
               <button
                 onClick={handleConfirmAssign}
+                disabled={!assignDept}
                 className="px-4 py-2 bg-brand-600 hover:bg-brand-500 text-xs font-semibold text-white rounded-lg shadow-lg shadow-brand-600/20 transition-all"
               >
                 Confirm Route

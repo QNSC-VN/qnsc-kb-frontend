@@ -4,6 +4,7 @@ import remarkGfm from 'remark-gfm'
 import rehypeHighlight from 'rehype-highlight'
 
 export interface AnswerCitation {
+  source_index?: number
   article_id: string
   title: string
   source_ref: string
@@ -21,7 +22,8 @@ const CITATION_REGEX = /\[(?:Source ID:\s*)?(\d+)\]/g
 
 /** Render grounded answers like DocNexus while making every citation interactive. */
 export default function AnswerText({ content, citations = [], onCitationClick }: AnswerTextProps) {
-  const findCitation = (number: number) => citations[number > 0 ? number - 1 : 0]
+  const findCitation = (number: number) => citations.find((citation) => citation.source_index === number)
+    || (citations.every((citation) => citation.source_index == null) ? citations[number > 0 ? number - 1 : 0] : undefined)
 
   const processCitations = (children: React.ReactNode): React.ReactNode => React.Children.map(children, (child) => {
     if (typeof child === 'string') {

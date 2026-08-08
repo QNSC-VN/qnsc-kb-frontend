@@ -4,10 +4,11 @@ import { useAuth } from '../auth/useAuth'
 
 interface ProtectedRouteProps {
   children: React.ReactNode
+  permission?: string
 }
 
-export default function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { isAuthenticated, loading } = useAuth()
+export default function ProtectedRoute({ children, permission }: ProtectedRouteProps) {
+  const { isAuthenticated, loading, user } = useAuth()
 
   if (loading) {
     return <div className="flex h-screen items-center justify-center bg-slate-950 text-slate-100">Loading...</div>
@@ -15,6 +16,10 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />
+  }
+
+  if (permission && !user?.permissions?.includes(permission)) {
+    return <Navigate to="/" replace />
   }
 
   return <>{children}</>

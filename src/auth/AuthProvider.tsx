@@ -1,5 +1,7 @@
 import React, { createContext, useState, useEffect } from 'react'
 import { useAuthStore } from '../store/authStore'
+import { logoutSession } from '../api/auth'
+import { getAccessToken, refreshSession } from '../api/client'
 
 interface AuthContextType {
   isAuthenticated: boolean
@@ -16,7 +18,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { token, user, setAuth, clearAuth } = useAuthStore()
 
   useEffect(() => {
-    setLoading(false)
+    if (token) {
+      setLoading(false)
+      return
+    }
+    void refreshSession().then((ok) => {
+      const refreshedUser = JSON.parse(localStorage.getItem('user') || 'null')
+      const refreshedToken = getAccessToken()
+      if (ok && refreshedToken && refreshedUser) setAuth(refreshedToken, refreshedUser)
+    }).finally(() => setLoading(false))
   }, [token])
 
   const login = (token: string, user: any, refreshToken?: string) => {
@@ -24,6 +34,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const logout = () => {
+    void logoutSession().catch(() => undefined)
     clearAuth()
   }
 

@@ -5,8 +5,18 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>QNSC Knowledge Base</title>
+    <script>
+      (function () {
+        try {
+          var preference = localStorage.getItem('qnsc-theme') || 'system';
+          var isDark = preference === 'dark' || (preference === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          document.documentElement.dataset.theme = isDark ? 'dark' : 'light';
+          document.documentElement.style.colorScheme = isDark ? 'dark' : 'light';
+        } catch (_) { document.documentElement.dataset.theme = 'light'; }
+      })();
+    </script>
   </head>
-  <body class="bg-slate-950 text-slate-100 min-h-screen">
+  <body class="min-h-screen bg-background text-foreground">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

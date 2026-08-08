@@ -1,0 +1,9 @@
+# Do not send secrets, repository history, or local build artifacts to Docker.
+.env
+.env.*
+.git
+.gitignore
+node_modules/
+dist/
+coverage/
+*.log

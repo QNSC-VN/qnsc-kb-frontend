@@ -1,18 +1,28 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Plus, Filter, Tag as TagIcon, Layers, Shield, MessageSquare, ThumbsUp, Bookmark, Upload, Sparkles, CheckSquare, Square } from 'lucide-react'
+import { Check, ChevronDown, Plus, Filter, Tag as TagIcon, Layers, Shield, MessageSquare, ThumbsUp, Bookmark, Upload, Sparkles, CheckSquare, Square, X } from 'lucide-react'
 import { autoTagArticles, getArticles } from '../../api/articles'
 import { getTags } from '../../api/search'
 import { uploadSources } from '../../api/governance'
 import { useDialog } from '../../components/ui/DialogProvider'
 import { useLanguage } from '../../i18n/LanguageProvider'
+import { useAuth } from '../../auth/useAuth'
+import { listDepartments } from '../../api/auth'
+
+type Department = { id: string; name: string; company_domain: string; active: boolean }
+
+function UploadDepartmentPicker({ value, options, onChange }: { value: string[]; options: Department[]; onChange: (value: string[]) => void }) {
+  const [open, setOpen] = useState(false)
+  const selected = value.map(id => options.find(item => item.id === id)).filter(Boolean) as Department[]
+  const toggle = (id: string) => onChange(value.includes(id) ? value.filter(item => item !== id) : [...value, id])
+
+  return <div className="relative"><div className="mb-1 flex items-center justify-between gap-2"><span className="text-xs font-semibold text-steel">Target departments</span><span className="text-[10px] font-semibold text-stone">{selected.length} selected</span></div><button type="button" aria-expanded={open} onClick={() => setOpen(current => !current)} className="field flex min-h-11 w-full items-center justify-between gap-3 text-left text-xs transition hover:border-cyan/60"><span className={selected.length ? 'font-semibold text-ink' : 'text-stone'}>{selected.length ? `${selected.length} department${selected.length === 1 ? '' : 's'} selected` : 'Choose departments'}</span><ChevronDown size={15} className={`shrink-0 text-stone transition ${open ? 'rotate-180 text-cyan' : ''}`} /></button>{open && <div className="absolute inset-x-0 top-[calc(100%+4px)] z-30 overflow-hidden rounded-xl border border-hairline bg-card p-1.5 shadow-[0_18px_40px_rgb(var(--shadow)/.2)]"><div className="flex items-center justify-between border-b border-hairline px-2.5 py-2"><span className="text-[10px] font-bold uppercase tracking-[.14em] text-stone">Article access</span>{selected.length > 0 && <button type="button" onClick={() => onChange([])} className="text-[10px] font-semibold text-cyan hover:underline">Clear all</button>}</div><div className="max-h-48 overflow-y-auto py-1">{options.length ? options.map(item => { const checked = value.includes(item.id); return <button key={item.id} type="button" onClick={() => toggle(item.id)} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2.5 text-left text-xs text-ink transition hover:bg-surface-soft"><span className={`grid h-4 w-4 shrink-0 place-items-center rounded border ${checked ? 'border-cyan bg-cyan text-[#07131a]' : 'border-steel bg-input'}`}>{checked && <Check size={11} strokeWidth={3} />}</span><span className="min-w-0 flex-1 truncate font-semibold">{item.name}</span>{checked && value[0] === item.id && <span className="text-[10px] font-semibold text-cyan">Primary</span>}</button> }) : <p className="px-2.5 py-3 text-xs text-stone">No departments available.</p>}</div></div>}{selected.length > 0 && <div className="mt-2 flex flex-wrap gap-1.5">{selected.map((item, index) => <span key={item.id} className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 text-[10px] font-semibold ${index === 0 ? 'border-cyan/30 bg-cyan/10 text-cyan' : 'border-hairline bg-surface text-steel'}`}>{item.name}{index === 0 && <span className="text-[9px] uppercase tracking-wide opacity-70">primary</span>}<button type="button" aria-label={`Remove ${item.name}`} onClick={() => toggle(item.id)} className="rounded-full p-0.5 hover:bg-black/5"><X size={11} /></button></span>)}</div>}</div>
+}
 
 export default function ArticleListPage() {
   const [articles, setArticles] = useState<any[]>([])
   const [tags, setTags] = useState<string[]>([])
   const [selectedDept, setSelectedDept] = useState('')
-  const [selectedType, setSelectedType] = useState('')
-  const [selectedSensitivity, setSelectedSensitivity] = useState('')
   const [selectedStatus, setSelectedStatus] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [loading, setLoading] = useState(true)
@@ -21,11 +31,14 @@ export default function ArticleListPage() {
   const [autoTagging, setAutoTagging] = useState(false)
   const [uploadFiles, setUploadFiles] = useState<File[]>([])
   const [uploadTags, setUploadTags] = useState<string[]>([])
+  const [uploadDepartmentIds, setUploadDepartmentIds] = useState<string[]>([])
+  const [departments, setDepartments] = useState<Department[]>([])
   const uploadInputRef = useRef<HTMLInputElement>(null)
 
   const navigate = useNavigate()
   const dialog = useDialog()
   const { t } = useLanguage()
+  const { user } = useAuth()
 
   const toggleArticleSelection = (articleId: string) => {
     setSelectedArticleIds(current => current.includes(articleId) ? current.filter(id => id !== articleId) : [...current, articleId])
@@ -55,7 +68,6 @@ export default function ArticleListPage() {
     total: articles.length,
     published: articles.filter(article => article.status === 'published').length,
     drafts: articles.filter(article => article.status !== 'published').length,
-    protected: articles.filter(article => ['confidential', 'restricted'].includes(article.sensitivity)).length,
   }), [articles])
 
   const handleFileSelection = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -64,6 +76,8 @@ export default function ArticleListPage() {
     if (!files.length) return
     setUploadFiles(files)
     setUploadTags(files.map(() => ''))
+    const defaultDepartmentId = departments.find(item => item.active && item.company_domain === user?.company_domain && item.name === user?.dept)?.id
+    if (defaultDepartmentId) setUploadDepartmentIds(current => current.length ? current : [defaultDepartmentId])
   }
 
   const handleSourceUpload = async () => {
@@ -71,7 +85,8 @@ export default function ArticleListPage() {
     const tagsByFile = uploadTags.map(value => value.split(',').map(tag => tag.trim()).filter(Boolean))
     setUploading(true)
     try {
-      const result = await uploadSources(uploadFiles, tagsByFile)
+      const primaryDepartment = departments.find(item => item.id === uploadDepartmentIds[0])?.name || user?.dept || undefined
+      const result = await uploadSources(uploadFiles, tagsByFile, primaryDepartment, uploadDepartmentIds)
       // The batch endpoint returns { results: [...] }. Keep compatibility
       // with the single-file endpoint/proxies that return the draft directly.
       const items = Array.isArray(result?.results)
@@ -107,6 +122,7 @@ export default function ArticleListPage() {
       setUploading(false)
       setUploadFiles([])
       setUploadTags([])
+      setUploadDepartmentIds([])
     }
   }
 
@@ -115,8 +131,6 @@ export default function ArticleListPage() {
     try {
       const params: any = {}
       if (selectedDept) params.dept = selectedDept
-      if (selectedType) params.type = selectedType
-      if (selectedSensitivity) params.sensitivity = selectedSensitivity
       if (selectedStatus) params.status = selectedStatus
       if (searchQuery) params.q = searchQuery
       
@@ -131,13 +145,14 @@ export default function ArticleListPage() {
 
   useEffect(() => {
     fetchArticlesList()
-  }, [selectedDept, selectedType, selectedSensitivity, selectedStatus, searchQuery])
+  }, [selectedDept, selectedStatus, searchQuery])
 
   useEffect(() => {
     const fetchMetadata = async () => {
       try {
-        const t = await getTags()
-        setTags(t)
+        const [tagData, departmentData] = await Promise.all([getTags(), listDepartments()])
+        setTags(tagData)
+        setDepartments(departmentData)
       } catch (err) {
         console.error(err)
       }
@@ -183,8 +198,9 @@ export default function ArticleListPage() {
               <h2 className="text-sm font-semibold text-ink">Add tags to uploaded files</h2>
               <p className="mt-0.5 text-xs text-steel">Use comma-separated tags. These tags will be saved with each pending draft and published article.</p>
             </div>
-            <button type="button" onClick={() => { setUploadFiles([]); setUploadTags([]) }} className="text-xs font-semibold text-stone hover:text-ink">Cancel</button>
+            <button type="button" onClick={() => { setUploadFiles([]); setUploadTags([]); setUploadDepartmentIds([]) }} className="text-xs font-semibold text-stone hover:text-ink">Cancel</button>
           </div>
+          <div className="mb-3"><UploadDepartmentPicker value={uploadDepartmentIds} options={departments.filter(item => item.active && item.company_domain === user?.company_domain)} onChange={setUploadDepartmentIds} /><p className="mt-1.5 text-[11px] leading-5 text-stone">Choose every department that should receive access to the uploaded article. The first one is the primary department.</p></div>
           <div className="space-y-2">
             {uploadFiles.map((file, index) => (
               <div key={`${file.name}-${file.lastModified}`} className="grid gap-2 rounded-lg border border-hairline bg-surface p-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] md:items-center">
@@ -200,7 +216,7 @@ export default function ArticleListPage() {
       )}
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {[[t('articles.visible'), articleStats.total, 'bg-surface'], [t('articles.published'), articleStats.published, 'bg-emerald-500/[0.06]'], [t('articles.inProgress'), articleStats.drafts, 'bg-amber-400/[0.06]'], [t('articles.protected'), articleStats.protected, 'bg-cyan/[0.06]']].map(([label, value, tone]) => <div key={String(label)} className={`rounded-xl border border-slate-800 p-4 ${tone}`}><p className="text-[11px] font-medium text-slate-500">{label}</p><p className="mt-1 text-xl font-semibold text-white">{value}</p></div>)}
+        {[[t('articles.visible'), articleStats.total, 'bg-surface'], [t('articles.published'), articleStats.published, 'bg-emerald-500/[0.06]'], [t('articles.inProgress'), articleStats.drafts, 'bg-amber-400/[0.06]']].map(([label, value, tone]) => <div key={String(label)} className={`rounded-xl border border-slate-800 p-4 ${tone}`}><p className="text-[11px] font-medium text-slate-500">{label}</p><p className="mt-1 text-xl font-semibold text-white">{value}</p></div>)}
       </div>
 
       {/* Filter panel */}
@@ -232,47 +248,7 @@ export default function ArticleListPage() {
               className="w-full rounded-lg border border-slate-800 bg-slate-950/60 py-2 px-3 text-xs text-white outline-none focus:border-brand-500"
             >
               <option value="">{t('articles.allDepartments')}</option>
-              <option value="Engineering">Engineering</option>
-              <option value="Security">Security</option>
-              <option value="Human Resources">HR</option>
-              <option value="Legal">Legal</option>
-              <option value="Operations">Operations</option>
-            </select>
-          </div>
-
-          {/* Type Select */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">{t('articles.type')}</label>
-            <select
-              value={selectedType}
-              onChange={(e) => setSelectedType(e.target.value)}
-              className="w-full rounded-lg border border-slate-800 bg-slate-950/60 py-2 px-3 text-xs text-white outline-none focus:border-brand-500"
-            >
-              <option value="">{t('articles.allTypes')}</option>
-              <option value="POLICY">Policy</option>
-              <option value="SOP">SOP</option>
-              <option value="DECISION">Decision Log</option>
-              <option value="FAQ">FAQ</option>
-              <option value="RCA">RCA</option>
-              <option value="HOWTO">How-To</option>
-              <option value="PLAYBOOK">Playbook</option>
-              <option value="REFERENCE">Reference</option>
-            </select>
-          </div>
-
-          {/* Sensitivity Select */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">{t('articles.sensitivity')}</label>
-            <select
-              value={selectedSensitivity}
-              onChange={(e) => setSelectedSensitivity(e.target.value)}
-              className="w-full rounded-lg border border-slate-800 bg-slate-950/60 py-2 px-3 text-xs text-white outline-none focus:border-brand-500"
-            >
-              <option value="">{t('articles.allSensitivity')}</option>
-              <option value="public">Public</option>
-              <option value="internal">Internal</option>
-              <option value="confidential">Confidential</option>
-              <option value="restricted">Restricted</option>
+              {departments.filter(item => item.active && item.company_domain === user?.company_domain).map(item => <option key={item.id} value={item.name}>{item.name}</option>)}
             </select>
           </div>
 
@@ -324,22 +300,9 @@ export default function ArticleListPage() {
               <div>
                 {/* Badges row */}
                 <div className="flex flex-wrap gap-2 mb-3.5">
-                  <span className="bg-slate-850 px-2 py-0.5 rounded text-[10px] font-semibold text-brand-400 uppercase tracking-wider border border-brand-500/10">
-                    {art.type}
-                  </span>
                   <span className="bg-slate-850 px-2 py-0.5 rounded text-[10px] font-semibold text-teal-400 uppercase tracking-wider border border-teal-500/10">
                     {art.dept}
                   </span>
-                  {art.sensitivity === 'confidential' && (
-                    <span className="bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded text-[10px] font-semibold uppercase border border-amber-500/20">
-                      Confidential
-                    </span>
-                  )}
-                  {art.sensitivity === 'restricted' && (
-                    <span className="bg-rose-500/10 text-rose-400 px-2 py-0.5 rounded text-[10px] font-semibold uppercase border border-rose-500/20">
-                      Restricted
-                    </span>
-                  )}
                   {art.status === 'draft' && (
                     <span className="bg-slate-800 text-slate-400 px-2 py-0.5 rounded text-[10px] font-semibold uppercase">
                       Draft

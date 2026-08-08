@@ -6,15 +6,13 @@ import {
   ArrowLeft, 
   Calendar, 
   User as UserIcon, 
-  Shield, 
   Edit, 
   Trash2, 
   Bookmark, 
   ThumbsUp, 
   ThumbsDown, 
   MessageSquare,
-  History,
-  Lock
+  History
 } from 'lucide-react'
 import { 
   getArticle, 
@@ -35,12 +33,14 @@ import {
 import { downloadArticleSource } from '../../api/articles'
 import PdfViewer from '../../components/ai/PdfViewer'
 import { useAuth } from '../../auth/useAuth'
+import { usePermission } from '../../hooks/usePermission'
 import { useDialog } from '../../components/ui/DialogProvider'
 import { useLanguage } from '../../i18n/LanguageProvider'
 
 export default function ArticleDetailPage() {
   const { id } = useParams<{ id: string }>()
   const { user: currentUser } = useAuth()
+  const { has } = usePermission()
   const navigate = useNavigate()
   const dialog = useDialog()
   const { t } = useLanguage()
@@ -128,10 +128,9 @@ export default function ArticleDetailPage() {
     )
     if (!confirmed) return
     try {
-      const restored = await restoreArticleVersion(id, hist.version)
-      setArticle(restored)
-      setHistory(await getHistory(id))
-      await dialog.alert(t('articles.versionRestored', { version: hist.version, newVersion: restored.version }), { title: 'Version restored', tone: 'success' })
+      await restoreArticleVersion(id, hist.version)
+      await dialog.alert(`Version ${hist.version} was submitted for independent approval.`, { title: 'Restore submitted', tone: 'success' })
+      navigate('/governance/pending-drafts')
     } catch (err: any) {
       await dialog.alert(err?.response?.data?.detail || 'Could not restore this version.', { title: 'Restore failed', tone: 'danger' })
     }
@@ -208,7 +207,7 @@ export default function ArticleDetailPage() {
     )
   }
 
-  const canEdit = currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Department Owner' || currentUser.id === article.owner_id)
+  const canEdit = Boolean(currentUser && (has('article.edit') || (currentUser.id === article.owner_id && has('article.edit'))))
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
@@ -404,7 +403,7 @@ export default function ArticleDetailPage() {
                 {relatedArticles.map((related) => (
                   <Link key={related.id} to={`/articles/${related.id}`} className="rounded-lg border border-slate-800 bg-slate-950/30 p-3 transition hover:border-brand-500/50 hover:bg-slate-900">
                     <p className="truncate text-sm font-semibold text-white">{related.title}</p>
-                    <p className="mt-1 truncate text-xs text-slate-500">{related.dept} · {related.domain}</p>
+                    <p className="mt-1 truncate text-xs text-slate-500">{related.dept}</p>
                   </Link>
                 ))}
               </div>
@@ -436,51 +435,12 @@ export default function ArticleDetailPage() {
                 <span className="text-white font-semibold">{article.dept}</span>
               </div>
               <div>
-                <label className="text-slate-500 text-xs block mb-0.5">Domain Context</label>
-                <span className="text-white font-semibold">{article.domain}</span>
-              </div>
-              <div>
-                <label className="text-slate-500 text-xs block mb-0.5">Sensitivity</label>
-                <div className="flex items-center gap-1.5 text-white font-semibold capitalize mt-0.5">
-                  <Shield size={14} className="text-brand-400" />
-                  <span>{article.sensitivity}</span>
-                </div>
-              </div>
-              <div>
-                <label className="text-slate-500 text-xs block mb-0.5">Document Type</label>
-                <span className="bg-slate-800 text-brand-400 px-2 py-0.5 rounded text-xs font-semibold uppercase tracking-wider inline-block mt-0.5">
-                  {article.type}
-                </span>
-              </div>
-              <div>
                 <label className="text-slate-500 text-xs block mb-0.5">Next Review Schedule</label>
                 <span className="text-white font-semibold">
                   {article.next_review ? new Date(article.next_review).toLocaleDateString() : 'No schedule set'}
                 </span>
               </div>
             </div>
-          </div>
-
-          {/* Access groups constraints */}
-          <div className="bg-slate-900/30 border border-slate-800/80 rounded-xl p-5 space-y-4">
-            <h3 className="text-sm font-semibold text-slate-300 uppercase tracking-wider border-b border-slate-800 pb-2 flex items-center gap-1.5">
-              <Lock size={14} className="text-slate-400" />
-              <span>Access Scoping</span>
-            </h3>
-
-            {article.access_groups && article.access_groups.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
-                {article.access_groups.map((group: any) => (
-                  <span key={group.id} className="bg-slate-800 text-slate-300 px-2.5 py-1 rounded text-xs font-medium">
-                    {group.name}
-                  </span>
-                ))}
-              </div>
-            ) : (
-              <p className="text-xs text-slate-500 leading-normal">
-                This article is open to everyone in the organization (unrestricted access).
-              </p>
-            )}
           </div>
 
           {/* Version History Sidebar list if toggled */}

@@ -4,12 +4,13 @@ import AppRoutes from './routes/AppRoutes'
 import { AuthProvider } from './auth/AuthProvider'
 import DialogProvider from './components/ui/DialogProvider'
 import { LanguageProvider } from './i18n/LanguageProvider'
+import { ThemeProvider } from './theme/ThemeProvider'
 
 function App() {
   return (
-    <BrowserRouter>
+    <ThemeProvider><BrowserRouter>
       <LanguageProvider><AuthProvider><DialogProvider><AppRoutes /></DialogProvider></AuthProvider></LanguageProvider>
-    </BrowserRouter>
+    </BrowserRouter></ThemeProvider>
   )
 }
 
