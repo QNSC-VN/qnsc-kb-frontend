@@ -1,0 +1,6 @@
+# Default owner for everything in this repo.
+# Enforced via the main-protection ruleset (require_code_owner_review).
+* @QNSC-VN/qnsc-kb-maintainers
+
+/.github/         @QNSC-VN/qnsc-kb-maintainers
+/src/api/         @QNSC-VN/qnsc-kb-maintainers

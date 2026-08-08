@@ -1,0 +1,34 @@
+# =============================================================================
+# Security · Scan — thin caller of the shared reusable (qnsc-ci).
+#
+# scan_container is false: the Dockerfile here builds an nginx image for the
+# single-VPS Compose stack, and nothing deploys it — the SPA ships to Cloudflare
+# Pages as static assets. Scanning an image that never runs would report CVEs nobody
+# can act on while missing nothing real. Semgrep, gitleaks and OSV still run.
+# =============================================================================
+name: Security · Scan
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "0 4 * * 1" # Monday 04:00 UTC
+
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  security-events: write # SARIF upload
+
+jobs:
+  security:
+    uses: QNSC-VN/qnsc-ci/.github/workflows/security.yml@v1.7.0
+    with:
+      product: qnsc-kb-frontend
+      scan_container: false
+      node_version: '20'
+      osv_blocking: true
