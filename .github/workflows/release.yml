@@ -1,0 +1,23 @@
+# =============================================================================
+# Release Please — opens a "chore(release): vX.Y.Z" PR on every push to main, then
+# tags when merged. The tag triggers the production deploy of the SPA.
+#
+# Versioned INDEPENDENTLY of qnsc-kb-backend: two repos, two release streams. The API
+# contract between them is enforced by the backend's OpenAPI diff job, not by shared
+# version numbers.
+# =============================================================================
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: release-please
+  cancel-in-progress: false
+
+jobs:
+  release:
+    uses: QNSC-VN/qnsc-ci/.github/workflows/release-please.yml@v1.7.1
+    secrets:
+      RELEASE_BOT_PRIVATE_KEY: ${{ secrets.RELEASE_BOT_PRIVATE_KEY }}
