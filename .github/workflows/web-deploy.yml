@@ -84,12 +84,13 @@ jobs:
 
   deploy:
     needs: [wait-for-ci]
-    # @v1.7, not @v1.7.0: this SPA needs the VITE_API_BASE_URL export that v1.7.0 did not
-    # have. Without it the build silently falls back to a relative /api/v1, Cloudflare
-    # Pages answers those with index.html (or 405 on POST), and the deployed site cannot
-    # log in while looking perfectly healthy. The minor tag is moved onto each patch by
-    # qnsc-ci's own tag-sync workflow, so this keeps picking up fixes to the 1.7 line.
-    uses: QNSC-VN/qnsc-ci/.github/workflows/web-deploy.yml@v1.7
+    # v1.7.1 or later is REQUIRED here: v1.7.0 exported only VITE_API_URL, which rally
+    # builds empty on purpose. This SPA calls its API cross-origin and needs the absolute
+    # origin at build time — without it the bundle falls back to a relative /api/v1,
+    # Cloudflare Pages answers those with index.html (405 on POST), and the deployed site
+    # cannot log in while looking perfectly healthy. v1.7.1 also asserts the origin is
+    # present in the built bundle, so that failure can no longer ship silently.
+    uses: QNSC-VN/qnsc-ci/.github/workflows/web-deploy.yml@v1.7.1
     with:
       product: qnsc-kb
       # Standalone repo, not a monorepo: wrangler runs at the repo root and the bundle
