@@ -1,13 +1,14 @@
 import client, { clearExpiredSession, getAccessToken, refreshSession } from './client'
 
-export async function askAI(question: string, conversation_id?: string) {
-  const response = await client.post('/ai/ask', { question, conversation_id })
+export async function askAI(question: string, conversation_id?: string, language: 'en' | 'vi' = 'en') {
+  const response = await client.post('/ai/ask', { question, conversation_id, language })
   return response.data
 }
 
 export async function askAIStream(
   question: string,
   conversationId: string | undefined,
+  language: 'en' | 'vi',
   onToken: (content: string) => void,
   onSources: (sources: any[]) => void,
   onDone: (data: any) => void,
@@ -18,10 +19,10 @@ export async function askAIStream(
   const response = await fetch(`${baseUrl}/ai/ask/stream`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-    body: JSON.stringify({ question, conversation_id: conversationId }),
+    body: JSON.stringify({ question, conversation_id: conversationId, language }),
   })
   if (response.status === 401 && retry && await refreshSession()) {
-    return askAIStream(question, conversationId, onToken, onSources, onDone, false)
+    return askAIStream(question, conversationId, language, onToken, onSources, onDone, false)
   }
   if (response.status === 401) clearExpiredSession()
   if (!response.ok || !response.body) throw new Error(`AI stream failed (${response.status})`)

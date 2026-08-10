@@ -4,7 +4,7 @@ export type LLMProvider = 'openai' | 'glm' | 'groq'
 
 export type LLMConfig = {
   configured: boolean
-  source: 'admin' | 'environment' | 'none'
+  source: 'admin' | 'none'
   enabled: boolean
   provider: LLMProvider
   model: string

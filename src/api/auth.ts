@@ -1,12 +1,23 @@
 import client from './client'
 
-export async function login(form: FormData) {
+export async function login(credentials: { username: string; password: string }) {
+  const form = new URLSearchParams()
+  form.set('username', credentials.username)
+  form.set('password', credentials.password)
   const response = await client.post('/auth/login', form, {
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
     },
   })
   return response.data
+}
+
+export async function getOidcConfig() {
+  return (await client.get('/auth/oidc/config')).data
+}
+
+export async function getMicrosoftLoginUrl() {
+  return (await client.get('/auth/entra/login')).data as { authorization_url: string }
 }
 
 export async function register(data: any) {
@@ -30,6 +41,10 @@ export async function listUsers() {
 
 export async function listDepartments() {
   return (await client.get('/auth/departments')).data
+}
+
+export async function listAccessGroups() {
+  return (await client.get('/auth/groups')).data
 }
 
 export async function createDepartment(data: { name: string; company_domain?: string }) {

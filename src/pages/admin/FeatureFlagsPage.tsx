@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { Check, Settings2, Sparkles } from 'lucide-react'
 import { getFeatureFlags, updateFeatureFlag } from '../../api/governance'
+import PageHeader from '../../components/ui/PageHeader'
 
 type FeatureFlag = {
   key: string
@@ -45,21 +46,14 @@ export default function FeatureFlagsPage() {
   }
 
   return (
-    <main className="mx-auto max-w-4xl p-6 text-ink lg:p-8">
-      <header className="mb-7 flex items-start justify-between gap-4">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-widest text-stone">Administration</p>
-          <h1 className="mt-2 text-2xl font-semibold tracking-tight">Feature controls</h1>
-          <p className="mt-1 max-w-2xl text-sm leading-6 text-steel">Turn optional AI and knowledge-base capabilities on or off for the workspace. Changes apply to new processing jobs.</p>
-        </div>
-        <Settings2 size={22} className="text-steel" />
-      </header>
+    <main className="page-shell page-stack text-ink">
+      <PageHeader eyebrow="Administration" title="Feature controls" description="Turn optional AI and knowledge-base capabilities on or off for the workspace. Changes apply to new processing jobs." icon={Settings2} />
 
       {(message || error) && <div className={`mb-5 rounded-lg border px-4 py-3 text-sm ${error ? 'border-rose-400/25 bg-rose-500/10 text-rose-200' : 'border-emerald-400/25 bg-emerald-500/10 text-emerald-200'}`}>{error || message}</div>}
 
       <section className="space-y-3">
         {loading ? <div className="rounded-xl border border-hairline bg-surface p-5 text-sm text-steel">Loading feature controls…</div> : flags.map(flag => (
-          <article key={flag.key} className="flex flex-col gap-4 rounded-xl border border-hairline bg-surface p-5 sm:flex-row sm:items-center sm:justify-between">
+          <article key={flag.key} className="glass-panel interactive-lift flex flex-col gap-4 rounded-2xl border border-border p-5 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex min-w-0 items-start gap-3">
               <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-cyan/10 text-cyan"><Sparkles size={17} /></div>
               <div className="min-w-0">

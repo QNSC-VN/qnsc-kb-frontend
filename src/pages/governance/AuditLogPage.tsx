@@ -1,15 +1,20 @@
 import React, { useEffect, useState } from 'react'
 import { ClipboardList, ShieldAlert, RefreshCw } from 'lucide-react'
 import { getAuditLogs } from '../../api/governance'
+import PageHeader from '../../components/ui/PageHeader'
 
 export default function AuditLogPage() {
   const [logs, setLogs] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [userId, setUserId] = useState('')
+  const [action, setAction] = useState('')
+  const [startTime, setStartTime] = useState('')
+  const [endTime, setEndTime] = useState('')
 
   const fetchLogs = async () => {
     setLoading(true)
     try {
-      const data = await getAuditLogs()
+      const data = await getAuditLogs({ userId, action, startTime: startTime || undefined, endTime: endTime || undefined })
       setLogs(data)
     } catch (err) {
       console.error(err)
@@ -18,26 +23,31 @@ export default function AuditLogPage() {
     }
   }
 
-  useEffect(() => {
-    fetchLogs()
-  }, [])
+  useEffect(() => { fetchLogs() }, [])
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-white flex items-center gap-2">
-            <ClipboardList size={28} className="text-slate-400" />
-            <span>Audit Trail Logs</span>
-          </h1>
-          <p className="text-slate-400 mt-1">Append-only log recording every create, update, delete, and permission change</p>
-        </div>
-        <button
+    <div className="page-shell page-stack">
+      <PageHeader eyebrow="Governance control" title="Audit trail" description="Append-only records for every create, update, delete, approval, and permission change." icon={ClipboardList} actions={<button
           onClick={fetchLogs}
-          className="p-2 rounded-lg border border-slate-800 bg-slate-900/40 text-slate-400 hover:text-white hover:bg-slate-800 transition-all"
+          className="mm-secondary flex items-center gap-2 px-3 py-2 text-xs font-semibold"
         >
-          <RefreshCw size={16} />
-        </button>
+          <RefreshCw size={15} /> Refresh
+        </button>} />
+
+      <div className="glass-panel grid gap-3 rounded-2xl border border-border p-4 md:grid-cols-4">
+        <label className="text-xs text-slate-400">User ID
+          <input value={userId} onChange={(event) => setUserId(event.target.value)} placeholder="UUID" className="field mt-1 w-full" />
+        </label>
+        <label className="text-xs text-slate-400">Action
+          <input value={action} onChange={(event) => setAction(event.target.value)} placeholder="approve, delete..." className="field mt-1 w-full" />
+        </label>
+        <label className="text-xs text-slate-400">From
+          <input type="datetime-local" value={startTime} onChange={(event) => setStartTime(event.target.value)} className="field mt-1 w-full" />
+        </label>
+        <label className="text-xs text-slate-400">To
+          <input type="datetime-local" value={endTime} onChange={(event) => setEndTime(event.target.value)} className="field mt-1 w-full" />
+        </label>
+        <button onClick={fetchLogs} className="mm-primary justify-self-start px-4 py-2 text-xs font-semibold md:col-span-4">Apply filters</button>
       </div>
 
       {loading ? (
@@ -50,7 +60,7 @@ export default function AuditLogPage() {
           No audit logs recorded yet.
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900/20">
+        <div className="glass-panel overflow-x-auto rounded-2xl border border-border">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="bg-slate-900/80 text-slate-400 uppercase tracking-wider border-b border-slate-800">
@@ -64,7 +74,7 @@ export default function AuditLogPage() {
             <tbody className="divide-y divide-slate-800/60 text-slate-350">
               {logs.map((log) => (
                 <tr key={log.id} className="hover:bg-slate-900/40 transition-colors">
-                  <td className="p-3.5 font-medium text-white">{log.user?.name || 'System Worker'}</td>
+                  <td className="p-3.5 font-medium text-primary-foreground">{log.user?.name || 'System Worker'}</td>
                   <td className="p-3.5">
                     <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide border ${
                       log.action === 'create' || log.action === 'approve'

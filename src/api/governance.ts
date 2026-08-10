@@ -1,23 +1,50 @@
 import client from './client'
 
+async function sha256Hex(file: File) {
+  const digest = await crypto.subtle.digest('SHA-256', await file.arrayBuffer())
+  return Array.from(new Uint8Array(digest)).map(byte => byte.toString(16).padStart(2, '0')).join('')
+}
+
 export async function uploadSource(file: File, tags: string[] = [], dept?: string, departmentIds: string[] = []) {
-  const form = new FormData()
-  form.append('file', file)
-  form.append('tags', JSON.stringify(tags))
-  if (dept) form.append('dept', dept)
-  if (departmentIds.length) form.append('department_ids', JSON.stringify(departmentIds))
-  const response = await client.post('/articles/upload-source', form)
-  return response.data
+  const sourceHash = await sha256Hex(file)
+  const intent = (await client.post('/articles/source-uploads', {
+    filename: file.name,
+    source_hash: sourceHash,
+    content_length: file.size,
+    dept,
+    department_ids: departmentIds,
+    tags,
+  })).data
+  const uploadResponse = await fetch(intent.upload_url, {
+    method: 'PUT',
+    body: file,
+    headers: intent.required_headers || {},
+  })
+  if (!uploadResponse.ok) throw new Error(`Private source upload failed (${uploadResponse.status})`)
+  return (await client.post(`/articles/source-uploads/${intent.draft_id}/complete`, { content_length: file.size })).data
 }
 
 export async function uploadSources(files: File[], tagsByFile: string[][] = [], dept?: string, departmentIds: string[] = []) {
-  const form = new FormData()
-  files.forEach((file) => form.append('files', file))
-  tagsByFile.forEach((tags) => form.append('tags', JSON.stringify(tags)))
-  if (dept) form.append('dept', dept)
-  if (departmentIds.length) form.append('department_ids', JSON.stringify(departmentIds))
-  const response = await client.post('/articles/upload-sources', form)
-  return response.data
+  const results: any[] = []
+  for (const [index, file] of files.entries()) {
+    try {
+      results.push({ filename: file.name, status: 'queued', ...(await uploadSource(file, tagsByFile[index] || [], dept, departmentIds)) })
+    } catch (error: any) {
+      const detail = error?.response?.data?.detail
+      results.push({
+        filename: file.name,
+        status: detail?.code === 'duplicate_document' ? 'duplicate' : 'failed',
+        status_code: error?.response?.status,
+        detail: typeof detail === 'object' ? detail : { message: detail || error?.message || 'Upload failed' },
+      })
+    }
+  }
+  return {
+    results,
+    queued_count: results.filter(item => item.status === 'queued').length,
+    duplicate_count: results.filter(item => item.status === 'duplicate').length,
+    failed_count: results.filter(item => item.status === 'failed').length,
+  }
 }
 
 export async function getPendingDrafts(status?: string) {
@@ -25,8 +52,13 @@ export async function getPendingDrafts(status?: string) {
   return response.data
 }
 
-export async function approveDraft(id: string, dept: string, updateArticleId?: string, treatAsNew = false) {
-  const response = await client.post(`/governance/pending-drafts/${id}/approve`, { dept, update_article_id: updateArticleId || null, treat_as_new: treatAsNew })
+export async function approveDraft(id: string, dept: string, departmentIds: string[] = [], updateArticleId?: string, treatAsNew = false) {
+  const response = await client.post(`/governance/pending-drafts/${id}/approve`, {
+    dept,
+    department_ids: departmentIds,
+    update_article_id: updateArticleId || null,
+    treat_as_new: treatAsNew,
+  })
   return response.data
 }
 
@@ -50,8 +82,28 @@ export async function restructureDraft(id: string) {
   return response.data
 }
 
+export async function decideRestructure(id: string, decision: 'keep_ai' | 'keep_lossless') {
+  const response = await client.post(`/governance/pending-drafts/${id}/restructure-decision`, { decision })
+  return response.data
+}
+
 export async function getDraftComparison(draftId: string, articleId: string) {
   const response = await client.get(`/governance/pending-drafts/${draftId}/comparison`, { params: { article_id: articleId } })
+  return response.data
+}
+
+export async function getDraftCandidates(draftId: string) {
+  const response = await client.get(`/governance/pending-drafts/${draftId}/candidates`)
+  return response.data
+}
+
+export async function reviewDraftCandidate(draftId: string, payload: { operation: string; candidate_id: string; other_candidate_id?: string; title?: string; split_at?: number; note?: string }) {
+  const response = await client.post(`/governance/pending-drafts/${draftId}/candidates/operation`, payload)
+  return response.data
+}
+
+export async function commitDraftCandidates(draftId: string) {
+  const response = await client.post(`/governance/pending-drafts/${draftId}/candidates/commit`)
   return response.data
 }
 
@@ -85,8 +137,15 @@ export async function dismissSearchGap(id: string) {
   return response.data
 }
 
-export async function getAuditLogs() {
-  const response = await client.get('/governance/audit-log')
+export async function getAuditLogs(filters: { userId?: string; action?: string; startTime?: string; endTime?: string } = {}) {
+  const response = await client.get('/governance/audit-log', {
+    params: {
+      user_id: filters.userId || undefined,
+      action: filters.action || undefined,
+      start_time: filters.startTime || undefined,
+      end_time: filters.endTime || undefined,
+    },
+  })
   return response.data
 }
 

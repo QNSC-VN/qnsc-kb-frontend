@@ -1,6 +1,14 @@
 import client from './client'
 
-export async function search(params: { q: string; dept?: string; limit?: number }) {
+export async function search(params: {
+  q: string
+  dept?: string
+  tag?: string
+  status?: string
+  date_from?: string
+  date_to?: string
+  limit?: number
+}) {
   const response = await client.get('/search', { params })
   return response.data
 }

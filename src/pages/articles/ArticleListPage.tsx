@@ -1,13 +1,14 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Check, ChevronDown, Plus, Filter, Tag as TagIcon, Layers, Shield, MessageSquare, ThumbsUp, Bookmark, Upload, Sparkles, CheckSquare, Square, X } from 'lucide-react'
-import { autoTagArticles, getArticles } from '../../api/articles'
+import { autoTagArticles, confirmArticleTags, getArticles } from '../../api/articles'
 import { getTags } from '../../api/search'
 import { uploadSources } from '../../api/governance'
 import { useDialog } from '../../components/ui/DialogProvider'
 import { useLanguage } from '../../i18n/LanguageProvider'
 import { useAuth } from '../../auth/useAuth'
 import { listDepartments } from '../../api/auth'
+import { Select } from '../../components/ui/Select'
 
 type Department = { id: string; name: string; company_domain: string; active: boolean }
 
@@ -49,15 +50,21 @@ export default function ArticleListPage() {
     setAutoTagging(true)
     try {
       const result = await autoTagArticles(selectedArticleIds)
-      const added = result.results?.filter((item: any) => item.added_tags?.length > 0) || []
-      await dialog.alert(
-        added.length
-          ? added.map((item: any) => `${item.title}: ${item.added_tags.join(', ')}`).join('\n')
-          : 'AI did not find any new tags for the selected articles.',
-        { title: 'AI tagging complete', tone: added.length ? 'success' : 'info' },
+      const suggestions = result.results?.filter((item: any) => item.suggested_tags?.length > 0) || []
+      if (!suggestions.length) {
+        await dialog.alert('AI did not suggest any new tags for the selected articles.', { title: 'No tag suggestions', tone: 'info' })
+        return
+      }
+      const approved = await dialog.confirm(
+        `Review the suggested tags before confirming:\n\n${suggestions.map((item: any) => `${item.title}: ${item.suggested_tags.join(', ')}`).join('\n')}\n\nConfirm these suggestions?`,
+        { title: 'Confirm AI tag suggestions', confirmLabel: 'Apply tags' },
       )
+      if (approved) {
+        await confirmArticleTags(suggestions.map((item: any) => ({ article_id: item.article_id, tags: item.proposed_tags })))
+        await dialog.alert('The confirmed tag sets were saved.', { title: 'Tags confirmed', tone: 'success' })
+        await fetchArticlesList()
+      }
       setSelectedArticleIds([])
-      await fetchArticlesList()
     } catch (error: any) {
       await dialog.alert(error?.response?.data?.detail || 'Could not generate tags for the selected articles.', { title: 'AI tagging failed', tone: 'danger' })
     } finally {
@@ -89,10 +96,11 @@ export default function ArticleListPage() {
       const result = await uploadSources(uploadFiles, tagsByFile, primaryDepartment, uploadDepartmentIds)
       // The batch endpoint returns { results: [...] }. Keep compatibility
       // with the single-file endpoint/proxies that return the draft directly.
-      const items = Array.isArray(result?.results)
-        ? result.results
-        : result?.id
-          ? [{ ...result, status: result.status === 'pending' ? 'queued' : (result.status || 'queued') }]
+      const resultPayload: any = result
+      const items = Array.isArray(resultPayload?.results)
+        ? resultPayload.results
+        : resultPayload?.id
+          ? [{ ...resultPayload, status: resultPayload.status === 'pending' ? 'queued' : (resultPayload.status || 'queued') }]
           : []
       const queued = items.filter((item: any) => ['queued', 'pending'].includes(item.status) || (!item.status && item.id))
       const duplicates = items.filter((item: any) => ['duplicate', 'duplicate_document'].includes(item.status) || item.detail?.code === 'duplicate_document')
@@ -104,7 +112,7 @@ export default function ArticleListPage() {
       const resultTone = queued.length > 0 ? 'success' : failed.length > 0 ? 'danger' : 'info'
       const resultTitle = queued.length > 0 ? 'Upload successful' : failed.length > 0 ? 'Upload needs attention' : 'No new files uploaded'
       const openQueue = queued.length > 0
-        ? await dialog.confirm('Your files were processed successfully and queued for review.', { title: 'Upload successful', confirmLabel: 'Review now', cancelLabel: 'Close', tone: 'success' })
+        ? await dialog.confirm('Your files were uploaded and queued for review. AI reading views will continue formatting in the background; follow their status in Pending Drafts.', { title: 'Upload successful', confirmLabel: 'Review now', cancelLabel: 'Close', tone: 'success' })
         : (await dialog.alert(summary, { title: resultTitle, tone: resultTone }), false)
       if (openQueue) navigate('/governance/pending-drafts')
     } catch (error: any) {
@@ -161,38 +169,41 @@ export default function ArticleListPage() {
   }, [])
 
   return (
-    <div className="space-y-6">
+    <div className="page-shell-wide page-stack pb-8">
       {/* Upper action bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="page-hero glass-panel soft-grid signal-line relative overflow-hidden rounded-panel border border-border px-4 py-5 sm:px-6 sm:py-6">
+        <div className="pointer-events-none absolute -right-12 -top-20 hidden h-56 w-56 opacity-70 xl:block"><div className="hero-orb h-full w-full"><div className="orbit-ring" /><div className="orb-core text-xl">Q</div></div></div>
+        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-stone"><Layers size={14} className="text-cyan" /> {t('articles.workspace')}</div>
-          <h1 className="text-2xl font-semibold tracking-tight text-white lg:text-3xl">{t('articles.title')}</h1>
-          <p className="mt-1 text-sm text-slate-400">{t('articles.subtitle')}</p>
+          <h1 className="font-display text-2xl font-extrabold tracking-[-.05em] text-foreground sm:text-3xl">{t('articles.title')}</h1>
+          <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">{t('articles.subtitle')}</p>
         </div>
-        <div className="flex flex-wrap gap-2 self-start sm:self-auto">
-          {selectedArticleIds.length > 0 && <button type="button" onClick={() => void handleAutoTag()} disabled={autoTagging} className="inline-flex items-center gap-2 rounded-full border border-cyan/30 bg-cyan/10 px-4 py-2.5 text-sm font-semibold text-cyan transition hover:bg-cyan/20 disabled:opacity-50"><Sparkles size={16} />{autoTagging ? 'Generating tags…' : `AI auto-tag (${selectedArticleIds.length})`}</button>}
+        <div className="relative flex flex-wrap gap-2 self-start sm:self-auto">
+          {selectedArticleIds.length > 0 && <button type="button" onClick={() => void handleAutoTag()} disabled={autoTagging} className="inline-flex items-center gap-2 rounded-xl border border-info/30 bg-info/10 px-4 py-2.5 text-sm font-semibold text-info transition hover:bg-info/20 disabled:opacity-50"><Sparkles size={16} />{autoTagging ? 'Generating tags…' : `AI auto-tag (${selectedArticleIds.length})`}</button>}
           <input ref={uploadInputRef} type="file" multiple className="hidden" onChange={handleFileSelection} accept=".pdf,.docx,.xlsx,.xlsm,.pptx,.txt,.md,.csv,.png,.jpg,.jpeg,.tif,.tiff,.bmp,.webp" />
           <button
             type="button"
             onClick={() => uploadInputRef.current?.click()}
             disabled={uploading}
-            className="inline-flex items-center gap-2 rounded-full border border-slate-700 px-4 py-2.5 text-sm font-semibold text-slate-200 transition-all hover:bg-slate-800 disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface px-4 py-2.5 text-sm font-semibold text-foreground transition-all hover:bg-surface-soft disabled:opacity-50"
           >
             <Upload size={16} />
             <span>{uploading ? t('articles.processing') : t('articles.uploadSources')}</span>
           </button>
           <Link
             to="/articles/new"
-            className="inline-flex items-center gap-2 rounded-full bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition-all hover:bg-brand-500"
+            className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-[0_8px_20px_rgb(var(--primary)/.22)] transition-all hover:-translate-y-0.5 hover:bg-primary/90"
           >
             <Plus size={18} />
             <span>{t('articles.newArticle')}</span>
           </Link>
         </div>
+        </div>
       </div>
 
       {uploadFiles.length > 0 && (
-        <div className="rounded-xl border border-cyan/25 bg-cyan/[0.06] p-4 shadow-sm">
+        <div className="glass-panel rounded-2xl border border-info/25 p-5 shadow-sm">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <div>
               <h2 className="text-sm font-semibold text-ink">Add tags to uploaded files</h2>
@@ -215,13 +226,13 @@ export default function ArticleListPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {[[t('articles.visible'), articleStats.total, 'bg-surface'], [t('articles.published'), articleStats.published, 'bg-emerald-500/[0.06]'], [t('articles.inProgress'), articleStats.drafts, 'bg-amber-400/[0.06]']].map(([label, value, tone]) => <div key={String(label)} className={`rounded-xl border border-slate-800 p-4 ${tone}`}><p className="text-[11px] font-medium text-slate-500">{label}</p><p className="mt-1 text-xl font-semibold text-white">{value}</p></div>)}
+      <div className="grid gap-3 sm:grid-cols-3">
+        {[[t('articles.visible'), articleStats.total, 'text-info'], [t('articles.published'), articleStats.published, 'text-success'], [t('articles.inProgress'), articleStats.drafts, 'text-warning']].map(([label, value, tone]) => <div key={String(label)} className="metric-spark interactive-lift rounded-2xl border border-border p-5"><div className="flex items-center justify-between"><p className="text-[11px] font-bold uppercase tracking-[.13em] text-muted-foreground">{label}</p><span className={`h-2 w-2 rounded-full bg-current shadow-[0_0_12px_currentColor] ${tone}`} /></div><p className={`mt-2 font-display text-3xl font-extrabold tracking-tight ${tone}`}>{value}</p><div className="mt-3 h-1.5 rounded-full bg-surface-muted"><div className={`h-full w-1/2 rounded-full bg-current opacity-70 ${tone}`} /></div></div>)}
       </div>
 
       {/* Filter panel */}
-      <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-4 backdrop-blur-md">
-        <div className="flex items-center gap-2 border-b border-slate-800 pb-3 mb-4">
+      <div className="rounded-2xl border border-border bg-surface/70 p-5 shadow-[0_12px_30px_rgb(var(--shadow)/.08)] backdrop-blur-md">
+        <div className="mb-4 flex items-center gap-2 border-b border-border pb-4">
           <Filter size={16} className="text-slate-400" />
           <div><span className="text-sm font-semibold text-slate-300">{t('articles.find')}</span><p className="mt-0.5 text-[11px] text-slate-500">{t('articles.findHelp')}</p></div>
         </div>
@@ -235,36 +246,36 @@ export default function ArticleListPage() {
               placeholder={t('articles.searchTitle')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full rounded-lg border border-slate-800 bg-slate-950/60 py-2 px-3 text-xs text-white placeholder-slate-500 outline-none focus:border-brand-500"
+              className="w-full rounded-lg border border-slate-800 bg-slate-950/60 py-2 px-3 text-xs text-primary-foreground placeholder-slate-500 outline-none focus:border-brand-500"
             />
           </div>
 
           {/* Department Select */}
           <div>
             <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">{t('articles.department')}</label>
-            <select
+            <Select
               value={selectedDept}
               onChange={(e) => setSelectedDept(e.target.value)}
-              className="w-full rounded-lg border border-slate-800 bg-slate-950/60 py-2 px-3 text-xs text-white outline-none focus:border-brand-500"
+              className="w-full rounded-lg border border-slate-800 bg-slate-950/60 py-2 px-3 text-xs text-primary-foreground outline-none focus:border-brand-500"
             >
               <option value="">{t('articles.allDepartments')}</option>
               {departments.filter(item => item.active && item.company_domain === user?.company_domain).map(item => <option key={item.id} value={item.name}>{item.name}</option>)}
-            </select>
+            </Select>
           </div>
 
           {/* Status Select */}
           <div>
             <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">{t('articles.status')}</label>
-            <select
+            <Select
               value={selectedStatus}
               onChange={(e) => setSelectedStatus(e.target.value)}
-              className="w-full rounded-lg border border-slate-800 bg-slate-950/60 py-2 px-3 text-xs text-white outline-none focus:border-brand-500"
+              className="w-full rounded-lg border border-slate-800 bg-slate-950/60 py-2 px-3 text-xs text-primary-foreground outline-none focus:border-brand-500"
             >
               <option value="">{t('articles.allStatuses')}</option>
               <option value="draft">Draft</option>
               <option value="published">Published</option>
               <option value="pending_review">Pending Review</option>
-            </select>
+            </Select>
           </div>
         </div>
       </div>
@@ -278,7 +289,7 @@ export default function ArticleListPage() {
       ) : articles.length === 0 ? (
         <div className="rounded-xl border border-dashed border-slate-800 bg-slate-900/10 p-12 text-center">
           <Layers className="mx-auto text-slate-600 mb-4" size={48} />
-          <h3 className="text-lg font-semibold text-white">{t('articles.noArticles')}</h3>
+          <h3 className="text-lg font-semibold text-primary-foreground">{t('articles.noArticles')}</h3>
           <p className="text-slate-500 text-sm mt-1">Try resetting your filters or make a new write-up.</p>
         </div>
       ) : (
@@ -287,7 +298,7 @@ export default function ArticleListPage() {
             <div
               key={art.id}
               onClick={() => navigate(`/articles/${art.id}`)}
-              className="group relative cursor-pointer rounded-xl border border-slate-800/80 bg-slate-900/20 p-5 hover:bg-slate-900/40 hover:border-slate-700/80 hover:shadow-xl transition-all duration-300 flex flex-col justify-between"
+              className="interactive-lift group relative flex cursor-pointer flex-col justify-between rounded-2xl border border-border bg-card p-5 shadow-[0_10px_26px_rgb(var(--shadow)/.08)]"
             >
               <button
                 type="button"
@@ -300,31 +311,31 @@ export default function ArticleListPage() {
               <div>
                 {/* Badges row */}
                 <div className="flex flex-wrap gap-2 mb-3.5">
-                  <span className="bg-slate-850 px-2 py-0.5 rounded text-[10px] font-semibold text-teal-400 uppercase tracking-wider border border-teal-500/10">
+                    <span className="rounded-full border border-info/20 bg-info/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-info">
                     {art.dept}
                   </span>
                   {art.status === 'draft' && (
-                    <span className="bg-slate-800 text-slate-400 px-2 py-0.5 rounded text-[10px] font-semibold uppercase">
+                      <span className="rounded-full bg-surface-muted px-2.5 py-1 text-[10px] font-bold uppercase text-muted-foreground">
                       Draft
                     </span>
                   )}
                 </div>
 
                 {/* Title */}
-                <h3 className="text-lg font-bold text-white group-hover:text-brand-400 transition-colors line-clamp-2">
+                <h3 className="line-clamp-2 text-lg font-bold text-foreground transition-colors group-hover:text-info">
                   {art.title}
                 </h3>
                 
                 {/* Description snippet */}
-                <p className="text-slate-400 text-sm mt-2 line-clamp-3 leading-relaxed">
+                <p className="mt-2 line-clamp-3 text-sm leading-relaxed text-muted-foreground">
                   {art.body_md ? art.body_md.replace(/[#*`_]/g, '') : 'No content preview.'}
                 </p>
               </div>
 
               {/* Footer info card */}
-              <div className="mt-5 pt-4 border-t border-slate-800/60 flex items-center justify-between text-xs text-slate-500">
+              <div className="mt-5 flex items-center justify-between border-t border-border pt-4 text-xs text-muted-foreground">
                 <div className="flex items-center gap-2">
-                  <div className="h-6 w-6 rounded-full bg-slate-800 flex items-center justify-center font-bold text-slate-300 uppercase text-[10px]">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/15 text-[10px] font-bold uppercase text-primary">
                     {art.owner?.name?.substring(0, 2) || 'OW'}
                   </div>
                   <span>{art.owner?.name || 'Owner'}</span>

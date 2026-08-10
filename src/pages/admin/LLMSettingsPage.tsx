@@ -4,7 +4,7 @@ import { getLLMConfig, updateLLMConfig, type LLMConfig, type LLMProvider } from 
 
 const providerOptions: { value: LLMProvider; label: string; description: string; model: string; baseUrl: string }[] = [
   { value: 'openai', label: 'OpenAI', description: 'GPT models through the OpenAI API.', model: 'gpt-4o-mini', baseUrl: 'https://api.openai.com/v1/chat/completions' },
-  { value: 'glm', label: 'GLM / Zhipu AI', description: 'GLM models through the Zhipu AI API.', model: 'glm-4.5-flash', baseUrl: 'https://open.bigmodel.cn/api/paas/v4/chat/completions' },
+  { value: 'glm', label: 'GLM / Z.ai Coding', description: 'GLM models through the Z.ai Coding API.', model: 'glm-4.5-flash', baseUrl: 'https://api.z.ai/api/coding/paas/v4/chat/completions' },
   { value: 'groq', label: 'Groq', description: 'Fast open models through Groq.', model: 'llama-3.3-70b-versatile', baseUrl: 'https://api.groq.com/openai/v1/chat/completions' },
 ]
 
@@ -55,9 +55,9 @@ export default function LLMSettingsPage() {
     }
   }
 
-  return <main className="mx-auto max-w-5xl p-6 text-ink lg:p-8">
-    <header className="mb-7 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-      <div><p className="text-xs font-semibold uppercase tracking-widest text-stone">Administration</p><h1 className="mt-2 text-2xl font-semibold tracking-tight">AI provider</h1><p className="mt-1 max-w-2xl text-sm leading-6 text-steel">Choose which LLM powers the assistant, document reading view, and AI tagging for the whole workspace.</p></div>
+  return <main className="page-shell page-stack text-ink">
+    <header className="page-hero glass-panel soft-grid relative mb-1 flex flex-col gap-4 overflow-hidden rounded-panel border border-border px-4 py-5 md:flex-row md:items-start md:justify-between sm:px-6 sm:py-6">
+      <div><p className="text-[10px] font-bold uppercase tracking-[.18em] text-muted">Administration / AI</p><h1 className="mt-3 font-display text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">AI provider</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">Choose which LLM powers the assistant, document reading view, and AI tagging for the whole workspace.</p></div>
       <div className={`inline-flex w-fit items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold ${config?.enabled ? 'bg-emerald-50 text-emerald-700' : 'bg-surface-soft text-stone'}`}><span className={`h-2 w-2 rounded-full ${config?.enabled ? 'bg-emerald-500' : 'bg-stone'}`} />{loading ? 'Loading…' : config?.enabled ? 'AI enabled' : 'AI disabled'}</div>
     </header>
 
@@ -70,7 +70,7 @@ export default function LLMSettingsPage() {
 
       <section className="flex flex-col gap-4 rounded-xl border border-hairline bg-surface p-5 sm:flex-row sm:items-center sm:justify-between"><div className="flex items-start gap-3"><div className="rounded-lg bg-emerald-50 p-2 text-emerald-700"><ShieldCheck size={18} /></div><div><h2 className="font-semibold">Use this provider</h2><p className="mt-1 text-xs text-steel">Disabling it makes AI features unavailable until another provider is configured.</p></div></div><button type="button" role="switch" aria-checked={enabled} onClick={() => setEnabled(current => !current)} className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold ${enabled ? 'border-emerald-400/30 bg-emerald-50 text-emerald-700' : 'border-hairline bg-canvas text-stone'}`}><span className={`h-4 w-4 rounded-full ${enabled ? 'bg-emerald-500' : 'bg-stone/40'}`} />{enabled ? 'Enabled' : 'Disabled'}</button></section>
 
-      <div className="flex justify-end"><button disabled={saving || loading} className="inline-flex items-center gap-2 rounded-lg bg-ink px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-700 disabled:opacity-50"><Save size={15} />{saving ? 'Saving…' : 'Save AI provider'}</button></div>
+      <div className="flex justify-end"><button disabled={saving || loading} className="inline-flex items-center gap-2 rounded-lg bg-ink px-4 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-slate-700 disabled:opacity-50"><Save size={15} />{saving ? 'Saving…' : 'Save AI provider'}</button></div>
     </form>
   </main>
 }
