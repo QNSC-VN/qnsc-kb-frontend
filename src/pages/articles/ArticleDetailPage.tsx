@@ -210,10 +210,10 @@ export default function ArticleDetailPage() {
   const canEdit = Boolean(currentUser && (has('article.edit') || (currentUser.id === article.owner_id && has('article.edit'))))
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
+    <div className="page-shell page-stack">
       {/* Navigation & Controls */}
-      <div className="flex items-center justify-between border-b border-slate-800 pb-4">
-        <Link to="/articles" className="flex items-center gap-1.5 text-slate-400 hover:text-white transition-colors text-sm">
+      <div className="page-hero glass-panel soft-grid signal-line relative flex items-center justify-between overflow-hidden rounded-panel border border-border px-4 py-4 sm:px-6">
+        <Link to="/articles" className="mm-secondary flex items-center gap-1.5 px-3 py-2 text-sm">
           <ArrowLeft size={16} />
           <span>{t('articles.back')}</span>
         </Link>
@@ -221,10 +221,10 @@ export default function ArticleDetailPage() {
         <div className="flex items-center gap-3">
           <button
             onClick={handleBookmarkToggle}
-            className={`p-2 rounded-lg border transition-all ${
+                 className={`rounded-xl border p-2 transition-all ${
               bookmarked 
                 ? 'bg-amber-500/10 border-amber-500/30 text-amber-400' 
-                : 'border-slate-800 bg-slate-900/40 text-slate-400 hover:text-white'
+                : 'border-slate-800 bg-slate-900/40 text-slate-400 hover:text-primary-foreground'
             }`}
             title={bookmarked ? "Bookmarked" : "Bookmark article"}
           >
@@ -233,10 +233,10 @@ export default function ArticleDetailPage() {
           
           <button
             onClick={() => setShowHistory(!showHistory)}
-            className={`p-2 rounded-lg border transition-all ${
+               className={`rounded-xl border p-2 transition-all ${
               showHistory 
                 ? 'bg-brand-500/10 border-brand-500/30 text-brand-400' 
-                : 'border-slate-800 bg-slate-900/40 text-slate-400 hover:text-white'
+                : 'border-slate-800 bg-slate-900/40 text-slate-400 hover:text-primary-foreground'
             }`}
             title="Version History"
           >
@@ -247,14 +247,14 @@ export default function ArticleDetailPage() {
             <>
               <Link
                 to={`/articles/${article.id}/edit`}
-                className="p-2 rounded-lg border border-slate-800 bg-slate-900/40 text-slate-400 hover:text-white transition-all"
+                 className="rounded-xl border border-border bg-surface px-3 py-2 text-muted-foreground transition-all hover:bg-surface-soft hover:text-foreground"
                 title="Edit Article"
               >
                 <Edit size={18} />
               </Link>
               <button
                 onClick={handleDelete}
-                className="p-2 rounded-lg border border-slate-800 bg-slate-900/40 text-rose-400 hover:bg-rose-500/10 transition-all"
+                 className="rounded-xl border border-destructive/20 bg-surface px-3 py-2 text-destructive transition-all hover:bg-destructive/10"
                 title="Soft Delete"
               >
                 <Trash2 size={18} />
@@ -265,7 +265,7 @@ export default function ArticleDetailPage() {
             <button
               onClick={() => void handleOpenSource()}
               disabled={sourceLoading}
-              className="flex items-center gap-1.5 rounded-lg border border-slate-800 bg-slate-900/40 px-3 py-2 text-xs font-semibold text-slate-300 transition-all hover:border-brand-500/50 hover:text-white disabled:cursor-wait disabled:opacity-60"
+               className="mm-secondary flex items-center gap-1.5 px-3 py-2 text-xs font-semibold disabled:cursor-wait disabled:opacity-60"
               title="Review original source"
             >
               {sourceLoading ? 'Loading source…' : 'Review source'}
@@ -278,11 +278,11 @@ export default function ArticleDetailPage() {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         
         {/* Content body */}
-        <div className="lg:col-span-3 space-y-6">
-          <div className="bg-slate-900/30 border border-slate-800/80 rounded-xl p-6 md:p-8 space-y-6">
+        <div className="lg:col-span-3 space-y-5">
+           <div className="glass-panel rounded-panel border border-border p-5 shadow-[0_16px_42px_rgb(var(--shadow)/.1)] md:p-6 space-y-5">
             <div>
               {/* Title & metadata */}
-              <h1 className="text-3xl font-extrabold text-white tracking-tight leading-tight">
+               <h1 className="font-display text-3xl font-extrabold leading-tight tracking-[-.04em] text-foreground md:text-4xl">
                 {article.title}
               </h1>
               
@@ -302,7 +302,7 @@ export default function ArticleDetailPage() {
             </div>
 
             {/* Render Markdown text (simple fallback renderer for preview logic) */}
-            <div className="prose prose-invert max-w-none text-slate-350 leading-relaxed text-sm font-sans border-t border-slate-800/40 pt-6 prose-headings:text-white prose-p:text-slate-300 prose-li:text-slate-300 prose-strong:text-white prose-code:rounded prose-code:bg-slate-800 prose-code:px-1 prose-code:py-0.5">
+            <div className="markdown-surface max-w-none border-t border-border pt-xl">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>{article.body_md}</ReactMarkdown>
             </div>
 
@@ -315,7 +315,7 @@ export default function ArticleDetailPage() {
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all text-xs ${
                     userVote === 1
                       ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 shadow-md'
-                      : 'border-slate-800 bg-slate-900/40 text-slate-400 hover:text-white'
+                      : 'border-slate-800 bg-slate-900/40 text-slate-400 hover:text-primary-foreground'
                   }`}
                 >
                   <ThumbsUp size={14} />
@@ -326,7 +326,7 @@ export default function ArticleDetailPage() {
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all text-xs ${
                     userVote === -1
                       ? 'bg-rose-500/10 border-rose-500/30 text-rose-400 shadow-md'
-                      : 'border-slate-800 bg-slate-900/40 text-slate-400 hover:text-white'
+                      : 'border-slate-800 bg-slate-900/40 text-slate-400 hover:text-primary-foreground'
                   }`}
                 >
                   <ThumbsDown size={14} />
@@ -337,8 +337,8 @@ export default function ArticleDetailPage() {
           </div>
 
           {/* Comments section */}
-          <div className="bg-slate-900/30 border border-slate-800/80 rounded-xl p-6 space-y-6">
-            <h3 className="text-lg font-bold text-white flex items-center gap-2">
+          <div className="bg-slate-900/30 border border-slate-800/80 rounded-xl p-5 space-y-5">
+            <h3 className="text-lg font-bold text-primary-foreground flex items-center gap-2">
               <MessageSquare size={18} />
               <span>Comments ({comments.length})</span>
             </h3>
@@ -353,7 +353,7 @@ export default function ArticleDetailPage() {
                         {comm.user?.name?.substring(0,2).toUpperCase() || 'US'}
                       </div>
                       <div>
-                        <span className="text-sm font-semibold text-white">{comm.user?.name}</span>
+                        <span className="text-sm font-semibold text-primary-foreground">{comm.user?.name}</span>
                         <span className="text-[10px] text-slate-500 ml-2">
                           {new Date(comm.created_at).toLocaleString()}
                         </span>
@@ -381,14 +381,14 @@ export default function ArticleDetailPage() {
                 placeholder="Share your thoughts or suggest corrections..."
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
-                className="w-full rounded-lg border border-slate-800 bg-slate-950/60 p-3 text-sm text-white placeholder-slate-500 outline-none focus:border-brand-500 h-24 resize-none"
+                className="w-full rounded-lg border border-slate-800 bg-slate-950/60 p-3 text-sm text-primary-foreground placeholder-slate-500 outline-none focus:border-brand-500 h-24 resize-none"
                 required
               />
               <div className="flex justify-end mt-2">
                 <button
                   type="submit"
                   disabled={submittingComment}
-                  className="bg-brand-600 hover:bg-brand-500 text-white font-semibold text-xs px-4 py-2 rounded-lg transition-all"
+                  className="bg-brand-600 hover:bg-brand-500 text-primary-foreground font-semibold text-xs px-4 py-2 rounded-lg transition-all"
                 >
                   {submittingComment ? 'Posting...' : 'Post Comment'}
                 </button>
@@ -402,7 +402,7 @@ export default function ArticleDetailPage() {
               <div className="grid gap-2 sm:grid-cols-2">
                 {relatedArticles.map((related) => (
                   <Link key={related.id} to={`/articles/${related.id}`} className="rounded-lg border border-slate-800 bg-slate-950/30 p-3 transition hover:border-brand-500/50 hover:bg-slate-900">
-                    <p className="truncate text-sm font-semibold text-white">{related.title}</p>
+                    <p className="truncate text-sm font-semibold text-primary-foreground">{related.title}</p>
                     <p className="mt-1 truncate text-xs text-slate-500">{related.dept}</p>
                   </Link>
                 ))}
@@ -412,7 +412,7 @@ export default function ArticleDetailPage() {
         </div>
 
         {/* Sidebar Metadata */}
-        <div className="lg:col-span-1 space-y-6">
+        <div className="lg:col-span-1 space-y-5">
           {/* Attributes card */}
           <div className="bg-slate-900/30 border border-slate-800/80 rounded-xl p-5 space-y-4">
             <h3 className="text-sm font-semibold text-slate-300 uppercase tracking-wider border-b border-slate-800 pb-2">
@@ -432,11 +432,11 @@ export default function ArticleDetailPage() {
               )}
               <div>
                 <label className="text-slate-500 text-xs block mb-0.5">Department</label>
-                <span className="text-white font-semibold">{article.dept}</span>
+                <span className="text-primary-foreground font-semibold">{article.dept}</span>
               </div>
               <div>
                 <label className="text-slate-500 text-xs block mb-0.5">Next Review Schedule</label>
-                <span className="text-white font-semibold">
+                <span className="text-primary-foreground font-semibold">
                   {article.next_review ? new Date(article.next_review).toLocaleDateString() : 'No schedule set'}
                 </span>
               </div>
@@ -458,7 +458,7 @@ export default function ArticleDetailPage() {
                     }}
                     className="cursor-pointer hover:bg-slate-800/40 p-2 rounded transition-all text-xs border border-transparent hover:border-slate-800"
                   >
-                    <div className="flex justify-between items-center text-white font-bold mb-1">
+                    <div className="flex justify-between items-center text-primary-foreground font-bold mb-1">
                       <span>Version {hist.version}</span>
                       <span className="text-[10px] text-slate-500 font-normal">
                         {new Date(hist.created_at).toLocaleDateString()}

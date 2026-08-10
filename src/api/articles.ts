@@ -35,6 +35,11 @@ export async function autoTagArticles(articleIds: string[]) {
   return response.data
 }
 
+export async function confirmArticleTags(items: { article_id: string; tags: string[] }[]) {
+  const response = await client.post('/articles/tags/confirm', { items })
+  return response.data
+}
+
 export async function deleteArticle(id: string) {
   const response = await client.delete(`/articles/${id}`)
   return response.data

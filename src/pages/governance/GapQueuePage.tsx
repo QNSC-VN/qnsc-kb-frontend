@@ -4,6 +4,8 @@ import { getSearchGaps, assignSearchGap, dismissSearchGap } from '../../api/gove
 import { listDepartments } from '../../api/auth'
 import { useAuth } from '../../auth/useAuth'
 import { useDialog } from '../../components/ui/DialogProvider'
+import PageHeader from '../../components/ui/PageHeader'
+import { Select } from '../../components/ui/Select'
 
 export default function GapQueuePage() {
   const dialog = useDialog()
@@ -74,19 +76,13 @@ export default function GapQueuePage() {
   }
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-white">Search Gaps</h1>
-          <p className="text-slate-400 mt-1">Queries yielding zero results logged for human resolution</p>
-        </div>
-        <button
+    <div className="page-shell page-stack">
+      <PageHeader eyebrow="Knowledge operations" title="Search gaps" description="Queries yielding zero results, routed to teams for human resolution." icon={AlertCircle} actions={<button
           onClick={fetchGaps}
-          className="p-2 rounded-lg border border-slate-800 bg-slate-900/40 text-slate-400 hover:text-white hover:bg-slate-800 transition-all"
+          className="mm-secondary flex items-center gap-2 px-3 py-2 text-xs font-semibold"
         >
-          <RefreshCw size={16} />
-        </button>
-      </div>
+          <RefreshCw size={15} /> Refresh
+        </button>} />
 
       {loading ? (
         <div className="flex justify-center items-center h-48 text-slate-400">
@@ -96,7 +92,7 @@ export default function GapQueuePage() {
       ) : gaps.length === 0 ? (
         <div className="rounded-xl border border-dashed border-slate-850 p-12 text-center bg-slate-900/5">
           <AlertCircle className="mx-auto text-slate-600 mb-3" size={40} />
-          <h3 className="text-md font-semibold text-white">No search gaps logged</h3>
+          <h3 className="text-md font-semibold text-primary-foreground">No search gaps logged</h3>
           <p className="text-slate-500 text-xs mt-1">Excellent! All recent employee queries have successfully resolved to articles in the KB.</p>
         </div>
       ) : (
@@ -104,11 +100,11 @@ export default function GapQueuePage() {
           {gaps.map((gap) => (
             <div
               key={gap.id}
-              className="rounded-xl border border-slate-800 bg-slate-900/10 p-5 flex items-center justify-between shadow-sm"
+              className="glass-panel interactive-lift flex items-center justify-between gap-4 rounded-2xl border border-border p-5 shadow-sm"
             >
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <span className="font-mono text-sm font-semibold text-white bg-slate-950 px-2.5 py-1 rounded-md border border-slate-850">
+                  <span className="font-mono text-sm font-semibold text-primary-foreground bg-slate-950 px-2.5 py-1 rounded-md border border-slate-850">
                     "{gap.query}"
                   </span>
                   <span className="bg-brand-500/10 text-brand-400 border border-brand-500/10 px-2 py-0.5 rounded text-[10px] font-semibold">
@@ -122,7 +118,7 @@ export default function GapQueuePage() {
                 <button
                   onClick={() => handleAssignClick(gap)}
                   disabled={actingGapId === gap.id}
-                  className="px-3.5 py-2 bg-brand-600/10 hover:bg-brand-600 hover:text-white border border-brand-500/20 text-brand-400 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all"
+                  className="px-3.5 py-2 bg-brand-600/10 hover:bg-brand-600 hover:text-primary-foreground border border-brand-500/20 text-brand-400 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all"
                 >
                   <UserPlus size={14} />
                   <span>Assign</span>
@@ -145,19 +141,19 @@ export default function GapQueuePage() {
       {showAssignModal && selectedGap && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
           <div className="w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900 p-6 space-y-5 shadow-2xl">
-            <h3 className="text-lg font-bold text-white">Assign Query Gap</h3>
+            <h3 className="text-lg font-bold text-primary-foreground">Assign Query Gap</h3>
             <p className="text-xs text-slate-400">Route this missing content request to a specific organizational department:</p>
 
             <div>
               <label className="block text-xs font-semibold text-slate-400 mb-1.5">Department</label>
-              <select
+              <Select
                 value={assignDept}
                 onChange={(e) => setAssignDept(e.target.value)}
-                className="w-full rounded-lg border border-slate-800 bg-slate-950 py-2 px-3 text-xs text-white outline-none focus:border-brand-500"
+                className="w-full rounded-lg border border-slate-800 bg-slate-950 py-2 px-3 text-xs text-primary-foreground outline-none focus:border-brand-500"
               >
                 <option value="">Select department</option>
                 {visibleDepartments.map(item => <option key={item.id} value={item.name}>{item.name}</option>)}
-              </select>
+              </Select>
             </div>
 
             <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
@@ -173,7 +169,7 @@ export default function GapQueuePage() {
               <button
                 onClick={handleConfirmAssign}
                 disabled={!assignDept}
-                className="px-4 py-2 bg-brand-600 hover:bg-brand-500 text-xs font-semibold text-white rounded-lg shadow-lg shadow-brand-600/20 transition-all"
+                className="px-4 py-2 bg-brand-600 hover:bg-brand-500 text-xs font-semibold text-primary-foreground rounded-lg shadow-lg shadow-brand-600/20 transition-all"
               >
                 Confirm Route
               </button>

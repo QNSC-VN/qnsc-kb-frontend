@@ -12,6 +12,7 @@ import {
 } from '../../api/ai'
 import PdfViewer from '../../components/ai/PdfViewer'
 import AnswerText from '../../components/ai/AnswerText'
+import AnswerSections from '../../components/ai/AnswerSections'
 import { useDialog } from '../../components/ui/DialogProvider'
 import { useLanguage } from '../../i18n/LanguageProvider'
 
@@ -33,6 +34,9 @@ interface Message {
   sender: 'user' | 'ai'
   text: string
   citations?: Citation[]
+  answerGrounded?: string
+  answerExtended?: string
+  hasExtended?: boolean
   logId?: string
   feedbackSubmitted?: boolean
   failed?: boolean
@@ -45,10 +49,10 @@ interface Conversation {
   updated_at: string
 }
 
-const SUGGESTIONS = [
-  'What is the SOP for database outage recovery?',
-  'What is the corporate travel policy?',
-  'Explain what RAG means in QNSC.',
+const PROMPT_CARDS = [
+  { label: 'Operations', text: 'What is the SOP for database outage recovery?', tone: 'text-info bg-info/10 border-info/20' },
+  { label: 'Policy', text: 'What is the corporate travel policy?', tone: 'text-primary bg-primary/10 border-primary/20' },
+  { label: 'Learn', text: 'Explain what RAG means in QNSC.', tone: 'text-warning bg-warning/10 border-warning/20' },
 ]
 
 function HighlightedSourceText({ text, highlights, highlight }: { text: string; highlights?: string[]; highlight?: string }) {
@@ -147,19 +151,22 @@ export default function AskPage() {
   const [sourceLoading, setSourceLoading] = useState(false)
   const [sourceError, setSourceError] = useState('')
   const [sourceCollapsed, setSourceCollapsed] = useState(false)
-  // Keep the conversation workspace focused on the current chat by default;
-  // the compact list button remains available for opening history.
-  const [sidebarOpen, setSidebarOpen] = useState(false)
+  // Desktop gets a persistent readable history rail; mobile opens it as a
+  // full-height drawer so the conversation never gets squeezed into a narrow
+  // reading column.
+  const [sidebarOpen, setSidebarOpen] = useState(() => typeof window !== 'undefined' && window.innerWidth >= 1024)
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [expandedSources, setExpandedSources] = useState<Record<string, boolean>>({})
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editTitle, setEditTitle] = useState('')
   const [historyQuery, setHistoryQuery] = useState('')
+  const [showAllHistory, setShowAllHistory] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const sourceUrlRef = useRef<string | null>(null)
+  const chatDesktopRef = useRef(typeof window !== 'undefined' && window.innerWidth >= 1024)
   const dialog = useDialog()
-  const { t } = useLanguage()
+  const { language, t } = useLanguage()
 
   const activeConversation = useMemo(
     () => conversations.find((item) => item.id === conversationId),
@@ -169,6 +176,9 @@ export default function AskPage() {
     const query = historyQuery.trim().toLowerCase()
     return query ? conversations.filter((item) => item.title.toLowerCase().includes(query)) : conversations
   }, [conversations, historyQuery])
+  const displayedConversations = showAllHistory || historyQuery.trim()
+    ? visibleConversations
+    : visibleConversations.slice(0, 8)
 
   const loadConversation = async (id: string) => {
     setConversationId(id)
@@ -182,6 +192,9 @@ export default function AskPage() {
         sender: item.role === 'user' ? 'user' : 'ai',
         text: item.content,
         citations: item.citations || [],
+        answerGrounded: item.answer_grounded,
+        answerExtended: item.answer_extended,
+        hasExtended: item.has_extended,
         logId: item.usage_log_id,
       })))
     } catch {
@@ -198,6 +211,16 @@ export default function AskPage() {
 
   useEffect(() => {
     refreshConversations(true).catch(() => setError('Could not load chat history.')).finally(() => setHistoryLoading(false))
+  }, [])
+
+  useEffect(() => {
+    const handleViewportChange = () => {
+      const desktop = window.innerWidth >= 1024
+      if (desktop !== chatDesktopRef.current) setSidebarOpen(desktop)
+      chatDesktopRef.current = desktop
+    }
+    window.addEventListener('resize', handleViewportChange)
+    return () => window.removeEventListener('resize', handleViewportChange)
   }, [])
 
   useEffect(() => {
@@ -253,6 +276,7 @@ export default function AskPage() {
     setSelectedSource(null)
     setViewerSource(null)
     setSourceCollapsed(false)
+    if (window.innerWidth < 1024) setSidebarOpen(false)
     textareaRef.current?.focus()
   }
 
@@ -280,6 +304,7 @@ export default function AskPage() {
       await askAIStream(
         query,
         activeId ?? undefined,
+        language,
         (content) => setMessages((previous) => previous.map((message) => {
           if (message.id !== assistantMessageId) return message
           const replaceMarker = '\u0000REPLACE\u0000'
@@ -288,7 +313,7 @@ export default function AskPage() {
             : { ...message, text: message.text + content }
         })),
         (citations) => setMessages((previous) => previous.map((message) => message.id === assistantMessageId ? { ...message, citations } : message)),
-        (data) => setMessages((previous) => previous.map((message) => message.id === assistantMessageId ? { ...message, logId: data.log_id } : message)),
+        (data) => setMessages((previous) => previous.map((message) => message.id === assistantMessageId ? { ...message, logId: data.log_id, answerGrounded: data.answer_grounded, answerExtended: data.answer_extended, hasExtended: data.has_extended } : message)),
       )
       await refreshConversations()
     } catch (requestError: any) {
@@ -350,7 +375,7 @@ export default function AskPage() {
   return (
     <>
       <style>{MOTION_STYLES}</style>
-      <div className="relative flex h-[calc(100vh-7rem)] min-h-[520px] overflow-hidden bg-canvas">
+      <div className="glass-panel ai-workspace-shell relative flex h-full max-h-full min-h-0 overflow-hidden rounded-[18px] border border-border/80 bg-canvas shadow-[0_16px_44px_rgb(var(--shadow)/.13)] lg:rounded-[20px]">
         {sidebarOpen && (
           <button
             className="ask-fade-in fixed inset-0 z-20 bg-black/35 lg:hidden"
@@ -359,13 +384,13 @@ export default function AskPage() {
           />
         )}
 
-        <aside className={`${sidebarOpen ? 'w-64' : 'w-12'} absolute inset-y-0 left-0 z-30 flex shrink-0 flex-col overflow-hidden border-r border-hairline bg-canvas transition-[width] duration-300 ease-out lg:static`}>
+        <aside className={`absolute inset-y-0 left-0 z-30 flex w-[min(88vw,20rem)] shrink-0 flex-col overflow-hidden border-r border-hairline bg-surface/95 shadow-2xl backdrop-blur-xl transition-[width,transform] duration-300 ease-out lg:static lg:shadow-none ${sidebarOpen ? 'translate-x-0 lg:w-72' : '-translate-x-full lg:translate-x-0 lg:w-14'}`}>
           {sidebarOpen ? (
             <>
               <div className="flex shrink-0 items-center gap-2 border-b border-hairline p-4">
                 <button
                   onClick={startNewChat}
-                  className="ask-press flex flex-1 items-center justify-center gap-2 rounded-lg bg-ink px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-charcoal hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-minimaxBlue/40"
+                  className="ask-press flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-3 py-2.5 text-sm font-bold text-primary-foreground shadow-[0_8px_18px_rgb(var(--primary)/.2)] hover:bg-primary/90 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
                 >
                   <Plus size={16} className="transition-transform duration-200 group-hover:rotate-90" /> {t('chat.new')}
                 </button>
@@ -390,7 +415,7 @@ export default function AskPage() {
                       onChange={(event) => setHistoryQuery(event.target.value)}
                       placeholder={t('chat.findChat')}
                       aria-label="Search chat history"
-                      className="w-full rounded-lg border border-hairline bg-canvas py-2 pl-8 pr-2 text-xs text-ink outline-none placeholder:text-stone focus:border-minimaxBlue focus:ring-2 focus:ring-minimaxBlue/20"
+                      className="w-full rounded-lg border border-hairline bg-canvas py-2 pl-8 pr-2 text-[13px] text-ink outline-none placeholder:text-stone focus:border-minimaxBlue focus:ring-2 focus:ring-minimaxBlue/20"
                     />
                   </label>
                 )}
@@ -398,7 +423,7 @@ export default function AskPage() {
                   <p className="ask-fade-in px-3 py-3 text-xs text-steel">{t('common.loading')}</p>
                 ) : visibleConversations.length === 0 ? (
                   <p className="ask-fade-in px-3 py-3 text-xs text-steel">{historyQuery ? 'No chats match your search.' : 'No saved chats yet.'}</p>
-                ) : visibleConversations.map((conversation, conversationIndex) => {
+                ) : displayedConversations.map((conversation, conversationIndex) => {
                   const active = conversation.id === conversationId
                   const editing = editingId === conversation.id
                   return (
@@ -448,6 +473,15 @@ export default function AskPage() {
                     </div>
                   )
                 })}
+                {!historyQuery.trim() && visibleConversations.length > 8 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAllHistory((current) => !current)}
+                    className="mt-1 w-full rounded-lg px-3 py-2 text-left text-[13px] font-semibold text-minimaxBlue transition hover:bg-surface hover:text-ink"
+                  >
+                    {showAllHistory ? t('chat.showLess') : t('chat.showMore', { count: visibleConversations.length - 8 })}
+                  </button>
+                )}
               </div>
             </>
           ) : (
@@ -473,17 +507,21 @@ export default function AskPage() {
         </aside>
 
         <main className="flex min-w-0 flex-1 flex-col overflow-hidden bg-canvas">
-          <div className="flex shrink-0 items-center justify-between border-b border-hairline px-5 py-3.5 lg:px-8">
-            <div className="flex min-w-0 items-center gap-3">
-              <div className={`grid h-9 w-9 place-items-center rounded-xl bg-coral text-white transition-shadow ${loading ? 'ask-avatar-live' : ''}`}>
+           <div className="signal-line flex shrink-0 items-center justify-between border-b border-hairline bg-surface/45 px-4 py-3.5 sm:px-5 sm:py-4 lg:px-8">
+             <div className="flex min-w-0 items-center gap-3">
+              <button onClick={() => setSidebarOpen(true)} className="ask-press grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-hairline bg-surface text-steel hover:bg-surface-soft hover:text-ink lg:hidden" title="Open chat history" aria-label="Open chat history"><List size={16} /></button>
+              <div className={`grid h-10 w-10 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-[0_8px_18px_rgb(var(--primary)/.2)] transition-shadow ${loading ? 'ask-avatar-live' : ''}`}>
                 <Bot size={19} />
               </div>
-              <div className="min-w-0">
-                <h1 className="truncate text-base font-semibold text-ink transition-colors">{activeConversation?.title || 'AI Assistant'}</h1>
-                <p className="text-[11px] text-stone">Grounded in your authorized documents</p>
-              </div>
+               <div className="min-w-0">
+                 <h1 className="truncate font-display text-base font-extrabold text-ink transition-colors">{activeConversation?.title || 'QNSC Intelligence'}</h1>
+               </div>
             </div>
             <div className="flex items-center gap-3">
+              <div className="hidden items-center gap-2 sm:flex">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-info/20 bg-info/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[.12em] text-info"><span className="h-1.5 w-1.5 rounded-full bg-info shadow-[0_0_8px_currentColor]" /> RAG online</span>
+                <span className="rounded-full border border-hairline bg-canvas px-2.5 py-1 text-[10px] font-semibold text-stone">{messages.length ? `${messages.length} turns` : 'New session'}</span>
+              </div>
               <span className="hidden items-center gap-1.5 text-[11px] text-stone sm:flex">
                 <span className={`h-1.5 w-1.5 rounded-full transition-colors duration-300 ${loading ? 'animate-pulse bg-amber-300' : 'bg-emerald-400'}`} />
                 {loading ? t('search.searching') : t('chat.ready')}
@@ -493,30 +531,32 @@ export default function AskPage() {
           </div>
 
           <div className="ask-scroll flex-1 overflow-y-auto overflow-x-hidden">
-            <div className="mx-auto w-full max-w-3xl px-5 py-8 lg:px-8">
+              <div className="mx-auto w-full max-w-none px-5 py-8 lg:px-8">
               {isEmpty ? (
-                <div className="flex flex-col items-center pt-12 text-center lg:pt-16">
-                  <span className="ask-fade-up grid h-11 w-11 place-items-center rounded-xl border border-hairline bg-surface-soft text-minimaxBlue">
+                <div className="relative flex flex-col items-center pt-12 text-center lg:pt-16">
+                  <div className="pointer-events-none absolute left-1/2 top-4 h-52 w-52 -translate-x-1/2 opacity-55"><div className="hero-orb h-full w-full"><div className="orbit-ring" /><div className="orbit-ring" style={{ inset: '8%', animationDuration: '21s' }} /><div className="orb-core text-2xl">Q</div></div></div>
+                  <span className="ask-fade-up relative z-10 grid h-11 w-11 place-items-center rounded-xl border border-hairline bg-surface-soft text-minimaxBlue">
                     <Layers size={20} />
                   </span>
-                  <div className="ask-fade-up mt-5 flex items-center gap-2 rounded-full border border-hairline bg-surface px-3 py-1.5 text-[11px] text-stone" style={{ animationDelay: '60ms' }}>
-                    <Sparkles size={13} className="text-coral" /> Private workspace assistant
+                  <div className="ask-fade-up relative z-10 mt-5 flex items-center gap-2 rounded-full border border-hairline bg-surface px-3 py-1.5 text-[11px] text-stone" style={{ animationDelay: '60ms' }}>
+                    <Sparkles size={13} className="text-coral" /> Private workspace intelligence
                   </div>
-                  <h2 className="ask-fade-up mt-4 text-3xl font-normal tracking-tight text-ink" style={{ animationDelay: '120ms' }}>{t('chat.askKnowledge')}</h2>
-                  <p className="ask-fade-up mt-2 max-w-md text-sm leading-7 text-steel" style={{ animationDelay: '160ms' }}>Every answer is grounded in documents you can access. Click a citation to inspect its source passage.</p>
-                  <div className="mt-8 flex w-full max-w-xl flex-col gap-2.5">
-                    {SUGGESTIONS.map((suggestion, suggestionIndex) => (
+                  <h2 className="ask-fade-up relative z-10 mt-4 font-display text-3xl font-extrabold tracking-tight text-ink" style={{ animationDelay: '120ms' }}>{t('chat.askKnowledge')}</h2>
+                  <div className="mt-8 grid w-full max-w-2xl gap-3 md:grid-cols-3">
+                    {PROMPT_CARDS.map((prompt, suggestionIndex) => (
                       <button
-                        key={suggestion}
-                        onClick={() => void handleAsk(suggestion)}
+                        key={prompt.text}
+                        onClick={() => void handleAsk(prompt.text)}
                         style={{ animationDelay: `${220 + suggestionIndex * 60}ms` }}
-                        className="ask-fade-up ask-press group flex w-full items-center gap-3 rounded-lg border border-hairline bg-canvas px-4 py-3 text-left text-sm leading-6 text-steel transition-all duration-200 hover:-translate-y-0.5 hover:border-minimaxBlue hover:bg-surface hover:text-ink hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-minimaxBlue/40"
+                        className="ask-fade-up ask-press group flex min-h-28 flex-col items-start justify-between rounded-2xl border border-hairline bg-canvas p-4 text-left transition-all duration-200 hover:-translate-y-1 hover:border-minimaxBlue hover:bg-surface hover:text-ink hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-minimaxBlue/40"
                       >
-                        <Sparkles size={15} className="shrink-0 text-stone transition-colors duration-200 group-hover:text-minimaxBlue" />
-                        {suggestion}
+                        <span className={`rounded-full border px-2 py-1 text-[9px] font-bold uppercase tracking-[.14em] ${prompt.tone}`}>{prompt.label}</span>
+                        <span className="mt-3 text-sm leading-5 text-steel transition group-hover:text-ink">{prompt.text}</span>
+                        <ArrowUp size={14} className="mt-3 rotate-45 text-stone transition group-hover:text-minimaxBlue" />
                       </button>
                     ))}
                   </div>
+                  <div className="mt-7 flex flex-wrap justify-center gap-2 text-[10px] font-semibold uppercase tracking-[.12em] text-stone"><span className="rounded-full border border-hairline bg-surface px-2.5 py-1.5">Authorized sources only</span><span className="rounded-full border border-hairline bg-surface px-2.5 py-1.5">Clickable citations</span><span className="rounded-full border border-hairline bg-surface px-2.5 py-1.5">Department aware</span></div>
                 </div>
               ) : (
                 <div className="flex flex-col gap-5">
@@ -525,8 +565,8 @@ export default function AskPage() {
                     const isStreamingThis = loading && index === messages.length - 1 && message.sender === 'ai'
                     if (message.sender === 'user') return (
                       <div key={messageId} className="ask-fade-up group flex justify-end">
-                        <div className="flex max-w-[82%] flex-col items-end gap-1">
-                          <p className="whitespace-pre-wrap rounded-2xl border border-hairline bg-surface px-4 py-2.5 text-sm leading-relaxed text-ink transition-shadow duration-200 group-hover:shadow-sm">{message.text}</p>
+                        <div className="flex w-full max-w-[96%] flex-col items-end gap-1">
+                          <p className="whitespace-pre-wrap rounded-2xl border border-hairline bg-surface px-4 py-2.5 text-[13px] leading-6 text-ink transition-shadow duration-200 group-hover:shadow-sm">{message.text}</p>
                           <button
                             onClick={() => void copyMessage(message, index)}
                             className="ask-press mr-2 p-1 text-stone opacity-0 transition-opacity duration-150 group-hover:opacity-100 hover:text-ink"
@@ -546,18 +586,18 @@ export default function AskPage() {
                     return (
                       <div
                         key={messageId}
-                        className={`ask-fade-up group relative rounded-2xl border p-4 sm:p-5 transition-colors ${isFailure ? 'border-rose-400/25 bg-rose-500/5' : isNoAnswer ? 'border-dashed border-hairline bg-transparent' : 'border-[#354457] bg-[#18232f]'}`}
+                         className={`ask-fade-up group relative w-full rounded-xl border-0 p-5 shadow-none sm:p-6 transition-colors ${isFailure ? 'bg-rose-500/5' : 'bg-transparent'}`}
                       >
                         <div className="flex gap-3">
                           <div
-                            className={`grid h-7 w-7 shrink-0 place-items-center rounded-lg transition-shadow ${isFailure ? 'bg-rose-500/15 text-rose-300' : isNoAnswer ? 'bg-surface-soft text-stone' : 'bg-coral text-white'} ${isStreamingThis ? 'ask-avatar-live' : ''}`}
+                            className={`grid h-7 w-7 shrink-0 place-items-center rounded-lg transition-shadow ${isFailure ? 'bg-rose-500/15 text-rose-300' : isNoAnswer ? 'bg-surface-soft text-stone' : 'bg-coral text-primary-foreground'} ${isStreamingThis ? 'ask-avatar-live' : ''}`}
                           >
                             {isFailure || isNoAnswer ? <AlertCircle size={14} /> : <Bot size={14} />}
                           </div>
                           <div className="min-w-0 flex-1">
                             {message.failed ? (
                               <div className="rounded-xl border border-rose-400/25 bg-rose-500/10 px-3 py-2.5">
-                                <div className="flex items-start gap-2 text-sm leading-relaxed text-rose-100">
+                                <div className="flex items-start gap-2 text-[13px] leading-6 text-rose-100">
                                   <AlertCircle size={15} className="mt-0.5 shrink-0 text-rose-300" />
                                   <span>{message.text}</span>
                                 </div>
@@ -569,9 +609,13 @@ export default function AskPage() {
                                 </button>
                               </div>
                             ) : isNoAnswer ? (
-                              <p className="text-sm italic leading-relaxed text-stone">{message.text}</p>
+                              <p className="text-[13px] italic leading-6 text-stone">{message.text}</p>
                             ) : (
-                              <AnswerText content={message.text} citations={message.citations} onCitationClick={setSelectedSource} />
+                              message.answerGrounded !== undefined ? (
+                                <AnswerSections grounded={message.answerGrounded} extended={message.answerExtended} citations={message.citations} onCitationClick={setSelectedSource} />
+                              ) : (
+                                <AnswerText content={message.text} citations={message.citations} onCitationClick={setSelectedSource} />
+                              )
                             )}
                             {isStreamingThis && <span className="ml-1 inline-block h-4 w-0.5 animate-pulse bg-coral align-text-bottom" />}
                           </div>
@@ -642,7 +686,7 @@ export default function AskPage() {
           </div>
 
           <div className="shrink-0 border-t border-hairline bg-canvas">
-            <div className="mx-auto w-full max-w-3xl px-5 py-4 lg:px-8">
+              <div className="mx-auto w-full max-w-none px-5 py-4 lg:px-8">
               {error && (
                 <div className="ask-fade-up mb-3 flex items-start gap-2 rounded-lg border border-rose-400/30 bg-rose-500/10 px-3 py-2.5 text-xs text-rose-200">
                   <AlertCircle size={15} className="mt-0.5 shrink-0" />
@@ -650,11 +694,11 @@ export default function AskPage() {
                   <button onClick={() => setError('')} className="ask-press underline hover:text-rose-100">Dismiss</button>
                 </div>
               )}
-              <div className="mb-2 flex items-center gap-1.5 text-[11px] text-stone">
-                Press <kbd className="rounded border border-hairline bg-surface px-1.5 py-0.5 font-mono text-[10px] text-steel">Enter</kbd> to send · <kbd className="rounded border border-hairline bg-surface px-1.5 py-0.5 font-mono text-[10px] text-steel">Shift+Enter</kbd> for a new line
+               <div className="mb-2 flex items-center gap-1.5 text-[11px] text-stone">
+                 <span className="inline-flex items-center gap-1.5 rounded-full border border-info/20 bg-info/10 px-2 py-1 text-[10px] font-bold text-info"><span className="h-1.5 w-1.5 rounded-full bg-info" /> Grounded mode</span><span className="hidden sm:inline">Press <kbd className="rounded border border-hairline bg-surface px-1.5 py-0.5 font-mono text-[10px] text-steel">Enter</kbd> to send · <kbd className="rounded border border-hairline bg-surface px-1.5 py-0.5 font-mono text-[10px] text-steel">Shift+Enter</kbd> for a new line</span>
                 <span className="ml-auto tabular-nums">{question.length}/4000</span>
               </div>
-              <div className="flex items-end gap-2 rounded-xl border border-hairline bg-surface p-2 transition-all duration-200 focus-within:border-minimaxBlue focus-within:shadow-md focus-within:ring-2 focus-within:ring-minimaxBlue/20">
+               <div className="gradient-border flex items-end gap-2 rounded-2xl border bg-surface p-2 transition-all duration-200 focus-within:shadow-lg focus-within:ring-2 focus-within:ring-minimaxBlue/20">
                 <textarea
                   ref={textareaRef}
                   rows={1}
@@ -664,13 +708,13 @@ export default function AskPage() {
                   disabled={loading}
                   maxLength={4000}
                   placeholder={t('chat.askPlaceholder')}
-                  className="max-h-44 min-h-[28px] flex-1 resize-none overflow-hidden bg-transparent px-2 py-1.5 text-sm leading-relaxed text-ink outline-none placeholder:text-stone"
+                  className="max-h-44 min-h-[28px] flex-1 resize-none overflow-hidden bg-transparent px-2 py-1.5 text-[13px] leading-6 text-ink outline-none placeholder:text-stone"
                 />
                 <button
                   onClick={() => void handleAsk()}
                   disabled={!question.trim() || loading}
                   aria-label="Send question"
-                  className="ask-press grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-ink text-white transition-all hover:scale-105 hover:bg-charcoal disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:scale-100"
+                   className="ask-press grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground shadow-[0_8px_18px_rgb(var(--primary)/.24)] transition-all hover:scale-105 hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:scale-100"
                 >
                   <ArrowUp size={17} />
                 </button>
@@ -683,8 +727,8 @@ export default function AskPage() {
           <>
             <button aria-label="Close source" onClick={() => setSelectedSource(null)} className="ask-fade-in fixed inset-0 z-40 bg-black/40 lg:hidden" />
             <aside className={`${sourceCollapsed ? 'w-12' : 'w-full max-w-sm lg:w-80'} ask-slide-in fixed inset-y-0 right-0 z-50 flex flex-col border-l border-hairline bg-surface transition-[width] duration-300 ease-out lg:static lg:shrink-0`}>
-              <header className="flex h-14 shrink-0 items-center gap-2 border-b border-hairline px-3">
-                <span className={`${sourceCollapsed ? 'hidden' : 'flex'} flex-1 text-[10px] font-semibold uppercase tracking-widest text-stone`}>Source reference</span>
+              <header className="signal-line flex h-14 shrink-0 items-center gap-2 border-b border-hairline px-3">
+                <span className={`${sourceCollapsed ? 'hidden' : 'flex'} flex-1 items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-info`}><span className="h-1.5 w-1.5 rounded-full bg-info" /> Source evidence</span>
                 <button
                   onClick={() => setSourceCollapsed((value) => !value)}
                   className="ask-press rounded-lg p-2 text-steel hover:bg-surface-soft hover:text-ink"
@@ -699,15 +743,16 @@ export default function AskPage() {
               {!sourceCollapsed && (
                 <>
                   <div className="ask-scroll ask-fade-in flex-1 overflow-y-auto p-5">
-                    <div className="flex items-start gap-2.5">
+                     <div className="gradient-border rounded-2xl border p-3">
+                     <div className="flex items-start gap-2.5">
                       <BookOpen size={16} className="mt-0.5 shrink-0 text-minimaxBlue" />
                       <div className="min-w-0">
                         <p className="truncate text-sm font-semibold text-ink">{selectedSource.title}</p>
                         <p className="mt-0.5 text-[11px] text-stone">{selectedSource.section_ref || 'General section'}{selectedSource.page_number ? ` · Page ${selectedSource.page_number}` : ''}</p>
-                      </div>
+                     </div></div>
                     </div>
                     <div className="mt-5">
-                      <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-stone">Source overview</p>
+                       <p className="mb-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-stone"><span className="h-1.5 w-1.5 rounded-full bg-warning" /> Highlighted passage</p>
                       <blockquote className="rounded-r-md border-l-2 border-minimaxBlue bg-canvas px-4 py-3 text-xs leading-relaxed text-steel transition-colors">
                         <HighlightedSourceText text={selectedSource.excerpt || ''} highlights={selectedSource.highlight_texts} highlight={selectedSource.highlight_text} />
                       </blockquote>
@@ -718,7 +763,7 @@ export default function AskPage() {
                     <button
                       disabled={sourceLoading || !sourceUrl}
                       onClick={() => openSourceViewer(selectedSource)}
-                      className="ask-press flex w-full items-center justify-center gap-2 rounded-lg bg-ink px-3 py-2 text-xs font-semibold text-white transition-all hover:bg-charcoal hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:shadow-none"
+                      className="ask-press flex w-full items-center justify-center gap-2 rounded-lg bg-ink px-3 py-2 text-xs font-semibold text-primary-foreground transition-all hover:bg-charcoal hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:shadow-none"
                     >
                       {sourceLoading ? 'Loading source…' : selectedSource.page_number ? `View PDF · page ${selectedSource.page_number}` : 'View original source'} <BookOpen size={13} />
                     </button>

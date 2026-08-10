@@ -77,10 +77,10 @@ export default function DepartmentsPage() {
     } catch (err: any) { setError(err.response?.data?.detail || 'Could not delete department') } finally { setActingId(null) }
   }
 
-  return <main className="mx-auto max-w-[1100px] space-y-6 text-foreground">
-    <header className="relative overflow-hidden rounded-2xl border border-border bg-surface-elevated px-5 py-6 shadow-[0_14px_34px_rgb(var(--shadow)/.12)] sm:px-6">
+  return <main className="page-shell page-stack text-foreground">
+    <header className="page-hero glass-panel rounded-panel border border-border px-4 py-5 shadow-[0_14px_34px_rgb(var(--shadow)/.1)] sm:px-6 sm:py-6">
       <div className="pointer-events-none absolute right-0 top-0 h-52 w-[40%] rounded-full bg-primary/10 blur-3xl" />
-      <div className="relative flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div><p className="text-[10px] font-bold uppercase tracking-[.16em] text-muted-foreground">Administration / structure</p><h1 className="mt-2 text-3xl font-semibold tracking-[-.04em] text-foreground">Departments</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">Create and maintain the department records used for employee membership, ownership scope, article uploads, and access rules.</p></div><Building2 className="text-info" size={28} /></div>
+      <div className="relative flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div><p className="text-[10px] font-bold uppercase tracking-[.16em] text-muted-foreground">Administration / structure</p><h1 className="mt-2 text-2xl font-semibold tracking-[-.04em] text-foreground sm:text-3xl">Departments</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">Create and maintain the department records used for employee membership, ownership scope, article uploads, and access rules.</p></div><Building2 className="text-info" size={28} /></div>
     </header>
 
     {(message || error) && <div role="status" className={`flex items-center justify-between gap-3 rounded-xl border px-4 py-3 text-sm ${error ? 'border-destructive/25 bg-destructive/10 text-destructive' : 'border-success/25 bg-success/10 text-success'}`}><span>{error || message}</span><button type="button" aria-label="Dismiss message" onClick={() => { setMessage(''); setError('') }} className="rounded-md p-1 hover:bg-foreground/10"><X size={15} /></button></div>}

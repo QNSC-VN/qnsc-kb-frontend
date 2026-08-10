@@ -14,6 +14,7 @@ const ArticleEditPage = lazy(() => import('../pages/articles/ArticleEditPage'))
 const SearchResultsPage = lazy(() => import('../pages/search/SearchResultsPage'))
 const AskPage = lazy(() => import('../pages/ai/AskPage'))
 const PendingDraftsPage = lazy(() => import('../pages/governance/PendingDraftsPage'))
+const BatchReviewPage = lazy(() => import('../pages/governance/BatchReviewPage'))
 const GapQueuePage = lazy(() => import('../pages/governance/GapQueuePage'))
 const AuditLogPage = lazy(() => import('../pages/governance/AuditLogPage'))
 const HealthDashboardPage = lazy(() => import('../pages/governance/HealthDashboardPage'))
@@ -25,11 +26,13 @@ const ConnectorsPage = lazy(() => import('../pages/admin/ConnectorsPage'))
 const FeatureFlagsPage = lazy(() => import('../pages/admin/FeatureFlagsPage'))
 const RolesPage = lazy(() => import('../pages/admin/RolesPage'))
 const LLMSettingsPage = lazy(() => import('../pages/admin/LLMSettingsPage'))
+const UiCatalogPage = lazy(() => import('../pages/dev/UiCatalogPage'))
 
 export default function AppRoutes() {
   return (
     <Suspense fallback={<div className="flex min-h-screen items-center justify-center text-sm text-steel">Loading…</div>}><Routes>
       <Route path="/login" element={<LoginPage />} />
+      {import.meta.env.DEV && <Route path="/dev/ui" element={<UiCatalogPage />} />}
       <Route path="/" element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
         <Route index element={<HomePage />} />
         <Route path="home" element={<HomePage />} />
@@ -45,6 +48,7 @@ export default function AppRoutes() {
         
         {/* Governance */}
         <Route path="governance/pending-drafts" element={<ProtectedRoute permission="governance.read"><PendingDraftsPage /></ProtectedRoute>} />
+        <Route path="governance/pending-drafts/:id/batch-review" element={<ProtectedRoute permission="governance.read"><BatchReviewPage /></ProtectedRoute>} />
         <Route path="governance/gap-queue" element={<ProtectedRoute permission="governance.read"><GapQueuePage /></ProtectedRoute>} />
         <Route path="governance/audit-log" element={<ProtectedRoute permission="governance.read"><AuditLogPage /></ProtectedRoute>} />
         <Route path="governance/health" element={<ProtectedRoute permission="governance.read"><HealthDashboardPage /></ProtectedRoute>} />

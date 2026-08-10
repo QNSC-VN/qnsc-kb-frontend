@@ -18,7 +18,9 @@ interface AnswerTextProps {
   onCitationClick: (citation: AnswerCitation) => void
 }
 
-const CITATION_REGEX = /\[(?:Source ID:\s*)?(\d+)\]/g
+// Backend citations use stable IDs such as [C1], while older answers used
+// numeric markers such as [1]. Render both as clickable source references.
+const CITATION_REGEX = /\[(?:Source ID:\s*)?(?:C)?(\d+)\]/gi
 
 /** Render grounded answers like DocNexus while making every citation interactive. */
 export default function AnswerText({ content, citations = [], onCitationClick }: AnswerTextProps) {
@@ -64,7 +66,7 @@ export default function AnswerText({ content, citations = [], onCitationClick }:
     React.createElement(tag, props, processCitations(children))
 
   return (
-    <div className="prose prose-invert max-w-none text-sm leading-7 prose-headings:font-semibold prose-headings:text-ink prose-p:text-ink prose-li:text-ink prose-strong:text-ink prose-code:rounded prose-code:bg-surface-soft prose-code:px-1 prose-code:py-0.5 prose-pre:rounded-xl prose-pre:border prose-pre:border-hairline prose-pre:bg-surface prose-blockquote:border-minimaxBlue prose-blockquote:text-steel">
+    <div className="markdown-surface chat-answer max-w-none">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeHighlight]}

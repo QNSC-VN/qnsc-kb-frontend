@@ -51,7 +51,7 @@ client.interceptors.response.use(
   (response) => response,
   async (error) => {
     const request = error.config as (typeof error.config & { _authRetry?: boolean }) | undefined
-    if (error.response?.status === 401 && request && !request._authRetry && !String(request.url || '').includes('/auth/refresh')) {
+    if (error.response?.status === 401 && request && !request._authRetry && !String(request.url || '').includes('/auth/refresh') && !String(request.url || '').includes('/auth/logout')) {
       request._authRetry = true
       if (await refreshSession()) {
         request.headers = request.headers || {}

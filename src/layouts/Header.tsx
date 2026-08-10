@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Bell, Command, Globe, Menu, Monitor, Plus, Search as SearchIcon } from 'lucide-react'
+import { Bell, Command, Globe, Menu, Monitor, Plus } from 'lucide-react'
 import { useLanguage } from '../i18n/LanguageProvider'
 import { usePermission } from '../hooks/usePermission'
 import { useTheme, type ThemePreference } from '../theme/ThemeProvider'
 import { listNotifications, markNotificationRead, type InAppNotification } from '../api/notifications'
+import { Select } from '../components/ui/Select'
+import { Tooltip } from '../components/ui/Tooltip'
 
 export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
   const navigate = useNavigate()
@@ -42,29 +44,18 @@ export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
   }
 
   return (
-    <header className="ops-header relative z-10 flex h-[68px] items-center justify-between gap-3 border-b border-border px-4 backdrop-blur-xl md:px-7">
-      <button type="button" onClick={onMenuClick} aria-label="Open navigation" className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-border bg-surface text-steel transition hover:bg-surface-soft hover:text-ink md:hidden"><Menu size={18} /></button>
-      <div className="relative hidden w-full max-w-md md:block">
-          <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-stone">
-          <SearchIcon size={18} />
-        </span>
-        <input
-          type="text"
-          placeholder={t('header.searchPlaceholder')}
-          onFocus={() => navigate('/search')}
-          className="w-full rounded-lg border border-border bg-input py-2.5 pl-10 pr-12 text-sm text-foreground placeholder-stone outline-none transition focus:border-ring focus:ring-2 focus:ring-ring/20"
-        />
-        <span className="absolute inset-y-0 right-0 flex items-center pr-2"><kbd className="rounded border border-border bg-surface-soft px-1.5 py-0.5 font-mono text-[10px] text-stone">⌘ K</kbd></span>
-      </div>
-      <div className="ml-auto flex items-center gap-2 md:gap-3">
-        {has('article.create') && <button type="button" onClick={() => navigate('/articles/new')} className="hidden items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs font-bold text-primary-foreground shadow-[0_7px_16px_rgb(var(--shadow)/.18)] transition hover:bg-primary/90 sm:inline-flex"><Plus size={14} /> New article</button>}
+    <header className="ops-header relative z-10 flex min-h-[56px] items-center justify-between gap-3 border-b border-border px-3 py-2 backdrop-blur-xl md:min-h-[60px] md:px-5">
+      <button type="button" onClick={onMenuClick} aria-label="Open navigation" className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-border bg-surface text-steel transition hover:bg-surface-soft hover:text-ink md:hidden"><Menu size={16} /></button>
+      <div className="hidden min-w-[150px] lg:block"><p className="text-[10px] font-bold uppercase tracking-[.16em] text-stone">QNSC / Workspace</p></div>
+      <div className="ml-auto flex items-center gap-1.5 md:gap-2">
+        {has('article.create') && <button type="button" onClick={() => navigate('/articles/new')} className="hidden items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs font-bold text-primary-foreground shadow-[0_5px_12px_rgb(var(--primary)/.18)] transition hover:bg-primary/90 sm:inline-flex"><Plus size={13} /> New article</button>}
         <div className="relative">
-          <button type="button" onClick={() => setNotificationsOpen((open) => !open)} title="Notifications" aria-expanded={notificationsOpen} className="relative grid h-9 w-9 place-items-center rounded-lg border border-border bg-surface text-steel transition hover:bg-surface-soft hover:text-ink">
-            <Bell size={16} />
-            {unreadCount > 0 && <span className="absolute -right-1 -top-1 grid min-h-4 min-w-4 place-items-center rounded-full bg-rose-600 px-1 text-[9px] font-bold text-white ring-2 ring-surface">{unreadCount > 9 ? '9+' : unreadCount}</span>}
-          </button>
-          {notificationsOpen && <div className="absolute right-0 top-11 z-30 w-80 overflow-hidden rounded-xl border border-border bg-surface shadow-2xl">
-            <div className="flex items-center justify-between border-b border-border px-3 py-2"><span className="text-sm font-bold text-ink">Notifications</span>{unreadCount > 0 && <span className="text-xs text-stone">{unreadCount} unread</span>}</div>
+          <Tooltip content="Notifications"><button type="button" onClick={() => setNotificationsOpen((open) => !open)} aria-label="Notifications" aria-expanded={notificationsOpen} className="relative grid h-8 w-8 place-items-center rounded-lg border border-border bg-surface text-steel transition hover:bg-surface-soft hover:text-ink">
+            <Bell size={15} />
+            {unreadCount > 0 && <span className="absolute -right-1 -top-1 grid min-h-4 min-w-4 place-items-center rounded-full bg-rose-600 px-1 text-[9px] font-bold text-primary-foreground ring-2 ring-surface">{unreadCount > 9 ? '9+' : unreadCount}</span>}
+          </button></Tooltip>
+          {notificationsOpen && <div className="absolute right-0 top-12 z-30 w-80 overflow-hidden rounded-2xl border border-border bg-surface-elevated shadow-2xl shadow-[rgb(var(--shadow)/.3)]">
+            <div className="flex items-center justify-between border-b border-border px-4 py-3"><span className="text-sm font-bold text-ink">Notifications</span>{unreadCount > 0 && <span className="rounded-full bg-primary/10 px-2 py-1 text-[10px] font-bold text-primary">{unreadCount} unread</span>}</div>
             <div className="max-h-80 overflow-y-auto">
               {notifications.length === 0 ? <p className="px-3 py-6 text-center text-sm text-stone">You’re all caught up.</p> : notifications.map((item) => <button type="button" key={item.id} onClick={() => void openNotification(item)} className={`block w-full border-b border-border px-3 py-3 text-left transition hover:bg-surface-soft ${item.read_at ? 'text-stone' : 'bg-primary/5 text-ink'}`}>
                 <span className="block text-sm font-semibold">{item.payload.event === 'draft_assigned' ? 'Draft assigned for review' : item.payload.event === 'draft_rejected' ? 'Draft needs changes' : 'Draft approved'}</span>
@@ -73,20 +64,20 @@ export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
             </div>
           </div>}
         </div>
-        <label className="flex items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 py-2 text-xs font-semibold text-steel" title={t('language.switch')}>
-          <Globe size={13} />
-          <select
+        <label className="flex h-8 items-center gap-1 rounded-lg border border-border bg-surface px-2 text-[11px] font-semibold text-steel">
+          <Globe size={12} />
+          <Select
             value={language}
             onChange={(event) => setLanguage(event.target.value as 'en' | 'vi')}
             aria-label={t('language.switch')}
-            className="cursor-pointer border-0 bg-transparent p-0 text-xs font-semibold text-ink outline-none"
+            className="cursor-pointer border-0 bg-transparent p-0 text-[11px] font-semibold text-ink outline-none"
           >
             <option value="en">EN</option>
             <option value="vi">VI</option>
-          </select>
+          </Select>
         </label>
-        <label className="hidden items-center gap-1.5 text-xs font-semibold text-steel md:flex" title="Appearance"><Monitor size={13} /><select value={theme} onChange={(event) => setTheme(event.target.value as ThemePreference)} aria-label="Appearance" className="theme-select"><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select></label>
-        <div className="hidden items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[.12em] text-stone lg:flex"><Command size={12} /> Ops console</div>
+        <label className="hidden h-8 items-center gap-1.5 rounded-lg border border-border bg-surface px-2 text-[11px] font-semibold text-steel md:flex"><Monitor size={12} /><Select value={theme} onChange={(event) => setTheme(event.target.value as ThemePreference)} aria-label="Appearance" className="theme-select text-[11px]"><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></Select></label>
+        <div className="hidden items-center gap-1.5 px-1 text-[10px] font-semibold uppercase tracking-[.12em] text-stone lg:flex"><Command size={11} /> Ops console</div>
       </div>
     </header>
   )

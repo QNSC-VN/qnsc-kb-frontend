@@ -6,6 +6,41 @@ export default {
   ],
   theme: {
     extend: {
+      spacing: {
+        xxs: '0.25rem',
+        xs: '0.5rem',
+        sm: '0.75rem',
+        md: '1rem',
+        lg: '1.25rem',
+        xl: '1.5rem',
+        xxl: '2rem',
+        xxxl: '2.5rem',
+      },
+      fontSize: {
+        caption: ['0.6875rem', { lineHeight: '1rem' }],
+        'body-sm': ['0.75rem', { lineHeight: '1.125rem' }],
+        body: ['0.875rem', { lineHeight: '1.375rem' }],
+        'body-lg': ['1rem', { lineHeight: '1.625rem' }],
+        h4: ['1.125rem', { lineHeight: '1.5rem' }],
+        h3: ['1.25rem', { lineHeight: '1.75rem' }],
+        h2: ['1.5rem', { lineHeight: '2rem' }],
+        h1: ['1.875rem', { lineHeight: '2.375rem' }],
+      },
+      borderRadius: {
+        control: '0.5rem',
+        surface: '0.75rem',
+        panel: '1rem',
+      },
+      minHeight: {
+        controlSm: '2rem',
+        controlMd: '2.5rem',
+        controlLg: '3rem',
+      },
+      minWidth: {
+        controlSm: '2rem',
+        controlMd: '2.5rem',
+        controlLg: '3rem',
+      },
       colors: {
         background: 'rgb(var(--background) / <alpha-value>)',
         foreground: 'rgb(var(--foreground) / <alpha-value>)',
