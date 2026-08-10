@@ -15,3 +15,5 @@ export async function getGlossary() {
   const response = await client.get('/meta/glossary')
   return response.data
 }
+
+// Touched by the repo-config verification PR — proves the labeler maps src/api/** to both area/web and area/api.
