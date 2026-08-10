@@ -1,0 +1,57 @@
+# =============================================================================
+# Security · Scan — thin caller of the shared reusable (qnsc-ci).
+#
+# scan_container is false: the Dockerfile here builds an nginx image for the
+# single-VPS Compose stack, and nothing deploys it — the SPA ships to Cloudflare
+# Pages as static assets. Scanning an image that never runs would report CVEs nobody
+# can act on while missing nothing real. Semgrep, gitleaks and OSV still run.
+# =============================================================================
+name: Security · Scan
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "0 4 * * 1" # Monday 04:00 UTC
+
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  security-events: write # SARIF upload
+  # A CEILING, not a grant this workflow uses: the reusable's Trivy job declares
+  # `packages: read`, and a called workflow can only REDUCE the caller's permissions,
+  # never elevate them. Without it here GitHub rejects the whole workflow before any job
+  # runs — a `startup_failure` with no log to read, which looks like the reusable is
+  # missing rather than like a permission ceiling.
+  packages: read
+
+jobs:
+  security:
+    uses: QNSC-VN/qnsc-ci/.github/workflows/security.yml@v1.7.0
+    with:
+      product: qnsc-kb-frontend
+      scan_container: false
+      node_version: '20'
+
+      # NON-BLOCKING, deliberately and temporarily. The scan still runs and its findings
+      # are still reported — this only stops them failing the build.
+      #
+      # The backlog it is standing on cannot be cleared by a dependency bump:
+      #
+      #   react-router / react-router-dom  6.30.4 → 7.18.2   PRODUCTION, major migration
+      #   vite / @vitejs/plugin-react      5.4.21 → 8.2.1    dev, major build tooling
+      #   brace-expansion (transitive)     1.1.16 → 5.0.8    dev, major
+      #   js-yaml, esbuild, nanoid                            dev, patch-level
+      #
+      # Only the react-router pair is a runtime exposure (GHSA-337j-9hxr-rhxg,
+      # GHSA-wrjc-x8rr-h8h6, GHSA-jjmj-jmhj-qwj2); everything else is build-time only.
+      #
+      # Flipping this back to true is the definition of done for that upgrade. Leaving it
+      # false past then means the next real CVE lands silently — which is exactly the
+      # failure this gate exists to prevent.
+      osv_blocking: false

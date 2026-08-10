@@ -1,0 +1,82 @@
+# =============================================================================
+# CI — quality gates on every PR and push to main.
+# Gate: lint → typecheck → build → dependency audit.
+#
+# Security scans live in security.yml (Semgrep + gitleaks + OSV), independently
+# runnable and also scheduled weekly.
+#
+# The filename matters beyond this repo: the deploy pipeline's `wait-for-ci` gate
+# looks up a run of `web-ci.yml` for the exact commit sha and FAILS CLOSED when it
+# finds none.
+# =============================================================================
+name: Web · CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+    # Deliberately NOT `edited` — that action belongs to pr-title.yml. Combined with
+    # cancel-in-progress below, listening for it here would cancel a real in-flight run
+    # whenever someone edits a PR title.
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: ci-web-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '20' # matches the Dockerfile's node:20-alpine build stage
+
+jobs:
+  quality:
+    name: Lint & typecheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      # Separate from `build`, which also runs tsc: a type error should fail as a type
+      # error in seconds, not as a build failure minutes later with a bundler stack
+      # trace on top of it.
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: [quality]
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - run: npm ci
+
+      # VITE_API_BASE_URL is baked in at BUILD time, so the value used here is only a
+      # placeholder to prove the bundle compiles. The deployed value comes from the
+      # environment-scoped Actions variable the deploy workflow passes.
+      - name: Build
+        env:
+          VITE_API_BASE_URL: /api/v1
+        run: npm run build
+
+      - name: Audit critical production vulnerabilities
+        run: npm audit --omit=dev --audit-level=critical
